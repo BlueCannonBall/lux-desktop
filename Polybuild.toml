@@ -1,0 +1,9 @@
+[paths]
+output = "lux-desktop"
+source = [".", "Polyweb", "Polyweb/Polynet"]
+artifact = "obj"
+install = "/usr/local/bin"
+
+[options]
+compilation-flags = "-Wall -std=c++17 -g `pkg-config --cflags --libs gtkmm-4.0`"
+libraries = ["ssl", "crypto"]
