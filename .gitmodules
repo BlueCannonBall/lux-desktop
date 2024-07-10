@@ -1,3 +1,6 @@
 [submodule "Polyweb"]
 	path = Polyweb
 	url = https://github.com/BlueCannonBall/Polyweb.git
+[submodule "libdatachannel"]
+	path = libdatachannel
+	url = https://github.com/paullouisageneau/libdatachannel.git

@@ -1,9 +1,11 @@
 [paths]
 output = "lux-desktop"
 source = [".", "Polyweb", "Polyweb/Polynet"]
+library = ["libdatachannel/build"]
+include = ["libdatachannel/include"]
 artifact = "obj"
 install = "/usr/local/bin"
 
 [options]
-compilation-flags = "-Wall -std=c++17 -g `pkg-config --cflags --libs gtkmm-4.0`"
-libraries = ["ssl", "crypto"]
+compilation-flags = "-Wall -Wno-unused-command-line-argument -std=c++17 -O3 `pkg-config --cflags --libs gtk+-3.0` `pkg-config --cflags --libs gstreamer-1.0`"
+libraries = ["datachannel", "ssl", "crypto"]

@@ -1,0 +1,185 @@
+#include "Polyweb/polyweb.hpp"
+#include "json.hpp"
+#include <cstdlib>
+#include <cstring>
+#include <functional>
+#include <gst/gst.h>
+#include <gtkmm.h>
+#include <iostream>
+#include <memory>
+#include <rtc/rtc.hpp>
+#include <string>
+
+using nlohmann::json;
+
+class Lux : public Gtk::Window {
+public:
+    Lux():
+        client_side_mouse_checkbutton("Client-side mouse"),
+        login_button("Login") {
+        set_default_size(460, -1);
+        set_title("Lux Client");
+
+        auto hbox = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 10);
+        hbox->set_valign(Gtk::Align::CENTER);
+        hbox->set_margin(20);
+
+        auto title_label = Gtk::make_managed<Gtk::Label>("Lux Client");
+        title_label->set_halign(Gtk::Align::START);
+        {
+            auto ctx = title_label->get_pango_context();
+            auto font = ctx->get_font_description();
+            font.set_weight(Pango::Weight::ULTRABOLD);
+            font.set_size(PANGO_SCALE * 26);
+            ctx->set_font_description(font);
+        }
+        hbox->append(*title_label);
+
+        address_entry.set_placeholder_text("IP Address");
+        address_entry.signal_activate().connect(sigc::mem_fun(*this, &Lux::login));
+        hbox->append(address_entry);
+
+        password_entry.property_placeholder_text() = "Password";
+        g_signal_connect(password_entry.gobj(), "activate", G_CALLBACK(&Lux::c_login), this);
+        hbox->append(password_entry);
+
+        hbox->append(client_side_mouse_checkbutton);
+
+        login_button.signal_clicked().connect(sigc::mem_fun(*this, &Lux::login));
+        hbox->append(login_button);
+
+        set_child(*hbox);
+    }
+
+protected:
+    Gtk::Entry address_entry;
+    Gtk::PasswordEntry password_entry;
+    Gtk::CheckButton client_side_mouse_checkbutton;
+    Gtk::Button login_button;
+
+    std::shared_ptr<rtc::PeerConnection> conn;
+    std::shared_ptr<rtc::Track> track;
+    std::shared_ptr<rtc::RtcpReceivingSession> session;
+
+    GstElement* appsrc;
+    pn::udp::Client client;
+
+    static void c_login(GtkWidget*, gpointer data) {
+        ((Lux*) data)->login();
+    }
+
+    void login() {
+        rtc::Configuration config;
+        config.iceServers.emplace_back("stun.l.google.com:19302");
+        conn = std::make_shared<rtc::PeerConnection>(config);
+
+        conn->onStateChange(std::bind(&Lux::handle_state_change, this, std::placeholders::_1));
+        conn->onGatheringStateChange(std::bind(&Lux::handle_gathering_state_change, this, std::placeholders::_1));
+
+        rtc::Description::Video media("video", rtc::Description::Direction::RecvOnly);
+        media.addH264Codec(96);
+        media.setBitrate(4000);
+
+        session = std::make_shared<rtc::RtcpReceivingSession>();
+        track = conn->addTrack(media);
+        track->setRtcpHandler(session);
+        track->onMessage(std::bind(&Lux::handle_message, this, std::placeholders::_1), nullptr);
+
+        conn->setLocalDescription();
+    }
+
+    void handle_state_change(rtc::PeerConnection::State state) {
+        std::cout << "State: " << state << std::endl;
+    }
+
+    void handle_gathering_state_change(rtc::PeerConnection::GatheringState state) {
+        std::cout << "Gathering State: " << state << std::endl;
+        if (state == rtc::PeerConnection::GatheringState::Complete) {
+            std::string offer;
+            {
+                auto description = conn->localDescription();
+                json offer_json = {
+                    {"type", description->typeString()},
+                    {"sdp", std::string(description.value())},
+                };
+                offer = offer_json.dump();
+            }
+
+            json req_body_json = {
+                {"password", password_entry.get_text()},
+                {"show_mouse", client_side_mouse_checkbutton.get_active()},
+                {"offer", pw::base64_encode(offer.data(), offer.size())},
+            };
+
+            pw::HTTPResponse resp;
+            if (pw::fetch("POST", "http://" + address_entry.get_text() + "/offer", resp, req_body_json.dump(), {{"Content-Type", "application/json"}}) == PN_ERROR) {
+                auto error_dialog = Gtk::AlertDialog::create("Failed to connect");
+                error_dialog->set_detail("Error: " + pw::universal_strerror());
+                error_dialog->show(*this);
+                return;
+            } else if (resp.status_code != 200) {
+                auto error_dialog = Gtk::AlertDialog::create("Failed to login");
+                error_dialog->set_detail("Error: Response has status code " + std::to_string(resp.status_code));
+                error_dialog->show(*this);
+                return;
+            }
+
+            json answer_json = json::parse(resp.body_string());
+            auto sdp_data = pw::base64_decode(answer_json["Offer"]);
+            answer_json = json::parse(sdp_data);
+
+            client.connect("127.0.0.1", 4000);
+
+            GstElement* pipeline = gst_pipeline_new(nullptr);
+            appsrc = gst_element_factory_make("udpsrc", nullptr);
+            GstElement* queue1 = gst_element_factory_make("queue", nullptr);
+            GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
+            GstElement* queue2 = gst_element_factory_make("queue", nullptr);
+            GstElement* avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
+            GstElement* glsinkbin = gst_element_factory_make("autovideosink", nullptr);
+            // GstElement* gtkglsink = gst_element_factory_make("gtkglsink", nullptr);
+
+            GstCaps* caps = gst_caps_new_simple("application/x-rtp", "media", G_TYPE_STRING, "video", "clock-rate", G_TYPE_INT, 90000, "encoding-name", G_TYPE_STRING, "H264", nullptr);
+            g_object_set(appsrc, "caps", caps, nullptr);
+            g_object_set(appsrc, "address", "127.0.0.1", nullptr);
+            g_object_set(appsrc, "port", 4000, nullptr);
+
+            gst_bin_add_many(GST_BIN(pipeline), appsrc, queue1, rtph264depay, queue2, avdec_h264, glsinkbin, nullptr);
+            if (!gst_element_link_many(appsrc, queue1, rtph264depay, queue2, avdec_h264, glsinkbin, NULL)) {
+                std::cerr << "Failed to link GStreamer elements" << std::endl;
+            }
+
+            // GtkWidget* widget;
+            // g_object_set(glsinkbin, "sink", gtkglsink, nullptr);
+            // g_object_get(gtkglsink, "widget", &widget, nullptr);
+            // gtk_window_set_child(gobj(), widget);
+            // g_object_set(appsrc, "format", GST_FORMAT_TIME, nullptr);
+            gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+            rtc::Description answer(answer_json["sdp"].get<std::string>(), answer_json["type"].get<std::string>());
+            conn->setRemoteDescription(answer);
+        }
+    }
+
+    void handle_message(rtc::binary message) {
+        client.sendto(message.data(), message.size(), nullptr, 0);
+        // GstBuffer* buf = gst_buffer_new_and_alloc(message.size());
+        // GstMapInfo map_info;
+        // gst_buffer_map(buf, &map_info, GST_MAP_WRITE);
+        // memcpy(map_info.data, message.data(), message.size());
+        // gst_buffer_unmap(buf, &map_info);
+
+        // GstFlowReturn result;
+        // g_signal_emit_by_name(appsrc, "push-buffer", buf, &result);
+        // gst_buffer_unref(buf);
+    }
+};
+
+int main2(int argc, char* argv[]) {
+    setenv("LANG", "C", true); // BUG: libdatachannel breaks with other locales
+    pn::init();
+    gst_init(&argc, &argv);
+    rtc::InitLogger(rtc::LogLevel::Debug);
+    auto app = Gtk::Application::create("org.telewindow.lux");
+    return app->make_window_and_run<Lux>(argc, argv);
+}
