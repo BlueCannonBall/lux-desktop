@@ -59,6 +59,7 @@ protected:
 
     glib::Object<GdkDisplay> display;
     glib::Object<GdkSeat> seat;
+    glib::Object<GdkCursor> blank_cursor;
     bool seat_grabbed = false;
     std::unique_ptr<RawMouseManager> raw_mouse_manager;
     gdouble scroll_delta_x = 0.;
@@ -290,7 +291,8 @@ public:
         if (!client_side_mouse) {
             display = gdk_display_get_default();
             seat = gdk_display_get_default_seat(display.get());
-            gdk_seat_grab(seat.get(), gtk_widget_get_window(window), GDK_SEAT_CAPABILITY_ALL_POINTING, FALSE, gdk_cursor_new_for_display(display.get(), GDK_BLANK_CURSOR), nullptr, nullptr, nullptr);
+            blank_cursor = gdk_cursor_new_for_display(display.get(), GDK_BLANK_CURSOR);
+            gdk_seat_grab(seat.get(), gtk_widget_get_window(window), GDK_SEAT_CAPABILITY_ALL_POINTING, FALSE, blank_cursor.get(), nullptr, nullptr, nullptr);
             seat_grabbed = true;
 
             gtk_widget_add_events(window, GDK_FOCUS_CHANGE_MASK);
@@ -330,7 +332,7 @@ public:
 
     void handle_focus(const GdkEventFocus& event) {
         if (event.in) {
-            gdk_seat_grab(seat.get(), gtk_widget_get_window(window), GDK_SEAT_CAPABILITY_ALL_POINTING, FALSE, gdk_cursor_new_for_display(display.get(), GDK_BLANK_CURSOR), nullptr, nullptr, nullptr);
+            gdk_seat_grab(seat.get(), gtk_widget_get_window(window), GDK_SEAT_CAPABILITY_ALL_POINTING, FALSE, blank_cursor.get(), nullptr, nullptr, nullptr);
         } else {
             gdk_seat_ungrab(seat.get());
         }
@@ -434,7 +436,7 @@ public:
 
 int main(int argc, char* argv[]) {
     pn::init();
-    rtc::InitLogger(rtc::LogLevel::Debug);
+    rtc::InitLogger(rtc::LogLevel::Info);
     gst_init(&argc, &argv);
 
     Lux lux;
