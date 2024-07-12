@@ -1,4 +1,6 @@
-#include <functional>
+#ifndef _GLIB_HPP
+#define _GLIB_HPP
+
 #include <glib-object.h>
 #include <utility>
 
@@ -38,6 +40,10 @@ namespace glib {
             return *this;
         }
 
+        ~Object() {
+            if (object) g_object_unref(object);
+        }
+
         T* get() const {
             return object;
         }
@@ -62,14 +68,27 @@ namespace glib {
             return object;
         }
 
-        template <typename U>
-        bool operator==(const U& other_object) const {
+        bool operator==(const T& other_object) const {
             return object == other_object.object;
         }
 
-        template <typename U>
-        bool operator!=(const U& other_object) const {
+        bool operator!=(const T& other_object) const {
             return object != other_object.object;
+        }
+
+        void reset() {
+            if (object) g_object_unref(object);
+            object = nullptr;
+        }
+
+        // It is assumed that the new object is not currently managed by any other glib::Object
+        void reset(T* object) {
+            if (this->object != object) {
+                if (this->object) g_object_unref(this->object);
+                this->object = object;
+            }
         }
     };
 } // namespace glib
+
+#endif
