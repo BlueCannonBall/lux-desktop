@@ -1,26 +1,28 @@
 #pragma once
 
-struct RawMouseEvent {
-    double x = 0;
-    double y = 0;
-};
+#include <gdk/gdk.h>
+#include <memory>
 
-#ifndef _WIN32
-typedef struct _XDisplay Display;
-#endif
+struct RawMouseEvent {
+    float x = 0;
+    float y = 0;
+};
 
 class RawMouseManager {
 protected:
-#ifndef _WIN32
-    Display* display = nullptr;
-    int xi_opcode;
-#endif
+    class Platform;
+    std::unique_ptr<Platform> platform;
 
 public:
+    bool mouse_locked = false;
+
     RawMouseManager();
     RawMouseManager(const RawMouseManager&) = delete;
     RawMouseManager(RawMouseManager&&) = delete;
     ~RawMouseManager();
+
+    void lock_mouse(GdkSurface* surface);
+    void unlock_mouse(GdkSurface* surface);
 
     bool pending() const;
     RawMouseEvent next_event();

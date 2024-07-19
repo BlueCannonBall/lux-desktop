@@ -7,5 +7,8 @@ artifact = "obj"
 install = "/usr/local/bin"
 
 [options]
-compilation-flags = "-Wall -Wno-unused-command-line-argument -std=c++17 -O3 `pkg-config --cflags --libs gtk+-3.0` `pkg-config --cflags --libs gstreamer-1.0`"
+compilation-flags = "-Wall -Wno-unused-command-line-argument -std=c++17 -O3 `pkg-config --cflags --libs gtk4` `pkg-config --cflags --libs gstreamer-1.0`"
 libraries = ["Xi", "X11", "datachannel", "ssl", "crypto"]
+
+[env.OS.Windows_NT.options]
+libraries = ["datachannel", "ssl", "crypto", "ws2_32"]

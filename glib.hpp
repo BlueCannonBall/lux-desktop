@@ -88,6 +88,10 @@ namespace glib {
                 this->object = object;
             }
         }
+
+        T* release() {
+            return std::exchange(object, nullptr);
+        }
     };
 } // namespace glib
 

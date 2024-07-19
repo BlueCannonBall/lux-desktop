@@ -16,35 +16,39 @@
 
 using nlohmann::json;
 
-void position_in_video(int x, int y, int video_width, int video_height, GtkWidget* window, int& x_ret, int& y_ret) {
-    float video_aspect_ratio = (float) video_width / video_height;
+static gboolean bus_call(GstBus* bus,
+    GstMessage* msg,
+    gpointer data) {
+    switch (GST_MESSAGE_TYPE(msg)) {
+    case GST_MESSAGE_EOS:
+        g_print("End of stream\n");
+        break;
 
-    gint window_width;
-    gint window_height;
-    gtk_window_get_size(GTK_WINDOW(window), &window_width, &window_height);
-    float window_aspect_ratio = (float) window_width / window_height;
+    case GST_MESSAGE_ERROR: {
+        gchar* debug;
+        GError* error;
 
-    if (video_aspect_ratio > window_aspect_ratio) {
-        x_ret = x / ((float) window_width / video_width);
-        y_ret = (y - ((1.f - window_aspect_ratio / video_aspect_ratio) * window_height / 2.f)) / ((float) window_width / video_width);
-    } else if (video_aspect_ratio < window_aspect_ratio) {
-        x_ret = (x - ((1.f - video_aspect_ratio / window_aspect_ratio) * window_width / 2.f)) / ((float) window_height / video_height);
-        y_ret = y / ((float) window_height / video_height);
-    } else {
-        x_ret = x / ((float) window_width / video_width);
-        y_ret = y / ((float) window_height / video_height);
+        gst_message_parse_error(msg, &error, &debug);
+        g_free(debug);
+
+        g_printerr("Error: %s\n", error->message);
+        g_error_free(error);
+
+        break;
     }
+    default:
+        break;
+    }
+
+    return TRUE;
 }
 
 class Lux {
 protected:
     GtkWidget* window;
-    GtkWidget* vbox;
     GtkWidget* address_entry;
     GtkWidget* password_entry;
     GtkWidget* client_side_mouse_check_button;
-
-    bool client_side_mouse;
 
     std::shared_ptr<rtc::PeerConnection> conn;
     std::shared_ptr<rtc::Track> track;
@@ -54,16 +58,11 @@ protected:
 
     glib::Object<GstElement> pipeline;
     pn::UniqueSocket<pn::udp::Client> gst_client;
-    gint width;
-    gint height;
+    gint video_width;
+    gint video_height;
 
-    glib::Object<GdkDisplay> display;
-    glib::Object<GdkSeat> seat;
-    glib::Object<GdkCursor> blank_cursor;
-    bool seat_grabbed = false;
-    std::unique_ptr<RawMouseManager> raw_mouse_manager;
-    gdouble scroll_delta_x = 0.;
-    gdouble scroll_delta_y = 0.;
+    bool client_side_mouse;
+    RawMouseManager raw_mouse_manager;
 
     struct ErrorInfo {
         Lux* lux;
@@ -85,16 +84,32 @@ protected:
     }
 
     void error(const std::string& primary_text, const std::string& secondary_text) {
+        static constexpr const char* buttons[] = {"Close", nullptr};
+
         std::cerr << primary_text << ": " << secondary_text << std::endl;
-        GtkWidget* dialog = gtk_message_dialog_new(GTK_WINDOW(window),
-            GTK_DIALOG_DESTROY_WITH_PARENT,
-            GTK_MESSAGE_ERROR,
-            GTK_BUTTONS_CLOSE,
-            "%s",
-            primary_text.c_str());
-        gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "%s", secondary_text.c_str());
-        gtk_dialog_run(GTK_DIALOG(dialog));
-        gtk_widget_destroy(dialog);
+        glib::Object<GtkAlertDialog> dialog = gtk_alert_dialog_new("%s", primary_text.c_str());
+        gtk_alert_dialog_set_detail(dialog.get(), secondary_text.c_str());
+        gtk_alert_dialog_set_buttons(dialog.get(), buttons);
+        gtk_alert_dialog_show(dialog.get(), GTK_WINDOW(window));
+    }
+
+    void position_in_video(int x, int y, int& x_ret, int& y_ret) {
+        float video_aspect_ratio = (float) video_width / video_height;
+
+        gint window_width = gtk_widget_get_width(window);
+        gint window_height = gtk_widget_get_height(window);
+        float window_aspect_ratio = (float) window_width / window_height;
+
+        if (video_aspect_ratio > window_aspect_ratio) {
+            x_ret = x / ((float) window_width / video_width);
+            y_ret = (y - ((1.f - window_aspect_ratio / video_aspect_ratio) * window_height / 2.f)) / ((float) window_width / video_width);
+        } else if (video_aspect_ratio < window_aspect_ratio) {
+            x_ret = (x - ((1.f - video_aspect_ratio / window_aspect_ratio) * window_width / 2.f)) / ((float) window_height / video_height);
+            y_ret = y / ((float) window_height / video_height);
+        } else {
+            x_ret = x / ((float) window_width / video_width);
+            y_ret = y / ((float) window_height / video_height);
+        }
     }
 
 public:
@@ -112,35 +127,43 @@ public:
         gtk_window_set_title(GTK_WINDOW(window), "Lux Desktop");
         gtk_window_set_default_size(GTK_WINDOW(window), 450, 0);
 
-        vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
-        g_object_set(vbox, "margin", 15, nullptr);
+        GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+        g_object_set(vbox, "margin-top", 15, "margin-bottom", 15, "margin-start", 15, "margin-end", 15, nullptr);
         gtk_widget_set_valign(vbox, GTK_ALIGN_CENTER);
 
         GtkWidget* title_label = gtk_label_new("<span size=\"25pt\" weight=\"ultrabold\">Lux Client</span>");
         gtk_label_set_use_markup(GTK_LABEL(title_label), TRUE);
         gtk_widget_set_halign(title_label, GTK_ALIGN_START);
-        gtk_container_add(GTK_CONTAINER(vbox), title_label);
+        gtk_box_append(GTK_BOX(vbox), title_label);
 
         address_entry = gtk_entry_new();
         gtk_entry_set_placeholder_text(GTK_ENTRY(address_entry), "IP Address");
         g_signal_connect(address_entry, "activate", G_CALLBACK(connect_cb), this);
-        gtk_container_add(GTK_CONTAINER(vbox), address_entry);
+        gtk_box_append(GTK_BOX(vbox), address_entry);
 
         password_entry = gtk_entry_new();
         gtk_entry_set_placeholder_text(GTK_ENTRY(password_entry), "Password");
         gtk_entry_set_visibility(GTK_ENTRY(password_entry), FALSE);
         g_signal_connect(password_entry, "activate", G_CALLBACK(connect_cb), this);
-        gtk_container_add(GTK_CONTAINER(vbox), password_entry);
+        gtk_box_append(GTK_BOX(vbox), password_entry);
 
         client_side_mouse_check_button = gtk_check_button_new_with_label("Client-side mouse");
-        gtk_container_add(GTK_CONTAINER(vbox), client_side_mouse_check_button);
+        gtk_box_append(GTK_BOX(vbox), client_side_mouse_check_button);
 
         GtkWidget* login_button = gtk_button_new_with_label("Login");
         g_signal_connect(login_button, "clicked", G_CALLBACK(connect_cb), this);
-        gtk_container_add(GTK_CONTAINER(vbox), login_button);
+        gtk_box_append(GTK_BOX(vbox), login_button);
 
-        gtk_container_add(GTK_CONTAINER(window), vbox);
-        gtk_widget_show_all(window);
+        gtk_window_set_child(GTK_WINDOW(window), vbox);
+        gtk_window_present(GTK_WINDOW(window));
+    }
+
+    ~Lux() {
+        if (pipeline) {
+            gst_element_set_state(pipeline.get(), GST_STATE_PAUSED);
+            gst_element_set_state(pipeline.get(), GST_STATE_READY);
+            gst_element_set_state(pipeline.get(), GST_STATE_NULL);
+        }
     }
 
     static void connect_cb(GtkWidget*, gpointer data) {
@@ -157,21 +180,23 @@ public:
 
         rtc::Description::Video media("video", rtc::Description::Direction::RecvOnly);
         media.addH264Codec(96);
-        media.setBitrate(4000);
 
         session = std::make_shared<rtc::RtcpReceivingSession>();
         track = conn->addTrack(media);
         track->setRtcpHandler(session);
         track->onMessage(std::bind(&Lux::handle_message, this, std::placeholders::_1), nullptr);
 
+        client_side_mouse = gtk_check_button_get_active(GTK_CHECK_BUTTON(client_side_mouse_check_button));
+
         ordered_channel = conn->createDataChannel("ordered-input");
-        unordered_channel = conn->createDataChannel("unordered-input",
-            {
-                .reliability = {
-                    .unordered = true,
-                },
-            });
-        client_side_mouse = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(client_side_mouse_check_button));
+        if (!client_side_mouse) {
+            unordered_channel = conn->createDataChannel("unordered-input",
+                {
+                    .reliability = {
+                        .unordered = true,
+                    },
+                });
+        }
 
         conn->setLocalDescription();
     }
@@ -216,14 +241,14 @@ public:
         }
 
         json req_body_json = {
-            {"password", gtk_entry_get_text(GTK_ENTRY(password_entry))},
+            {"password", gtk_editable_get_text(GTK_EDITABLE(password_entry))},
             {"show_mouse", !client_side_mouse},
             {"offer", pw::base64_encode(offer.data(), offer.size())},
         };
         std::cout << "Sending offer: " << req_body_json << std::endl;
 
         pw::HTTPResponse resp;
-        if (pw::fetch("POST", "http://" + std::string(gtk_entry_get_text(GTK_ENTRY(address_entry))) + "/offer", resp, req_body_json.dump(), {{"Content-Type", "application/json"}}) == PN_ERROR) {
+        if (pw::fetch("POST", "http://" + std::string(gtk_editable_get_text(GTK_EDITABLE(address_entry))) + "/offer", resp, req_body_json.dump(), {{"Content-Type", "application/json"}}) == PN_ERROR) {
             error("Failed to connect", "Error: " + pw::universal_strerror());
             return;
         } else if (resp.status_code != 200) {
@@ -243,67 +268,102 @@ public:
         }
 
         pipeline = gst_pipeline_new(nullptr);
-        glib::Object<GstElement> udpsrc = gst_element_factory_make("udpsrc", nullptr);
-        glib::Object<GstElement> rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
-        glib::Object<GstElement> queue = gst_element_factory_make("queue", nullptr);
-        glib::Object<GstElement> avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
-        glib::Object<GstElement> glsinkbin = gst_element_factory_make("glsinkbin", nullptr);
-        glib::Object<GstElement> gtkglsink = gst_element_factory_make("gtkglsink", nullptr);
 
-        GstCaps* caps = gst_caps_new_simple("application/x-rtp", "media", G_TYPE_STRING, "video", "clock-rate", G_TYPE_INT, 90000, "encoding-name", G_TYPE_STRING, "H264", nullptr);
-        g_object_set(udpsrc.get(), "caps", caps, "address", "127.0.0.1", nullptr);
-        gst_caps_unref(caps);
+        GstElement* udpsrc = gst_element_factory_make("udpsrc", nullptr);
+        {
+            GstCaps* caps = gst_caps_new_simple("application/x-rtp", "media", G_TYPE_STRING, "video", "encoding-name", G_TYPE_STRING, "H264", "clock-rate", G_TYPE_INT, 90000, nullptr);
+            g_object_set(udpsrc, "caps", caps, "address", "127.0.0.1", nullptr);
+            gst_caps_unref(caps);
 
-        gint port;
-        g_object_get(udpsrc.get(), "port", &port, nullptr);
-        std::cout << "Using port: " << port << std::endl;
-        if (gst_client->connect("127.0.0.1", port) == PN_ERROR) {
-            error("Failed to start streaming", "Error: Failed to connect to GStreamer: " + pn::universal_strerror());
-            return;
+            gint port;
+            g_object_get(udpsrc, "port", &port, nullptr);
+            std::cout << "Using port: " << port << std::endl;
+            if (gst_client->connect("127.0.0.1", port) == PN_ERROR) {
+                error("Failed to start streaming", "Error: Failed to connect to GStreamer: " + pn::universal_strerror());
+                gst_object_unref(udpsrc);
+                return;
+            }
         }
 
-        glib::Object<GstPad> pad = gst_element_get_static_pad(avdec_h264.get(), "src");
-        gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_BOTH, handle_pad_cb, this, nullptr);
+        GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
 
-        gst_bin_add_many(GST_BIN(pipeline.get()), udpsrc.get(), rtph264depay.get(), queue.get(), avdec_h264.get(), glsinkbin.get(), nullptr);
-        if (!gst_element_link_many(udpsrc.get(), rtph264depay.get(), queue.get(), avdec_h264.get(), glsinkbin.get(), NULL)) {
+        GstElement* queue = gst_element_factory_make("queue", nullptr);
+
+        GstElement* avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
+        {
+            glib::Object<GstPad> pad = gst_element_get_static_pad(avdec_h264, "src");
+            gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_BOTH, handle_pad_cb, this, nullptr);
+        }
+
+        GstElement* videoconvert = gst_element_factory_make("videoconvert", nullptr);
+
+        GstElement* gtk4paintablesink = gst_element_factory_make("gtk4paintablesink", nullptr);
+        GdkPaintable* paintable;
+        g_object_get(gtk4paintablesink, "paintable", &paintable, nullptr);
+
+        GstBus* bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline.get()));
+        gst_bus_add_watch(bus, bus_call, nullptr);
+        gst_object_unref(bus);
+
+        gst_bin_add_many(GST_BIN(pipeline.get()),
+            udpsrc,
+            rtph264depay,
+            queue,
+            avdec_h264,
+            videoconvert,
+            gtk4paintablesink,
+            nullptr);
+        if (!gst_element_link_many(udpsrc,
+                rtph264depay,
+                queue,
+                avdec_h264,
+                videoconvert,
+                gtk4paintablesink,
+                NULL)) {
             error("Failed to start streaming", "Error: Failed to link GStreamer elements");
             return;
         }
 
-        GtkWidget* video;
-        g_object_set(glsinkbin.get(), "sink", gtkglsink.get(), nullptr);
-        g_object_get(gtkglsink.get(), "widget", &video, nullptr);
-        gtk_container_remove(GTK_CONTAINER(window), vbox);
-        gtk_container_add(GTK_CONTAINER(window), video);
-        gtk_widget_show(video);
+        GtkWidget* video = gtk_picture_new_for_paintable(paintable);
+        gtk_window_set_child(GTK_WINDOW(window), video);
 
         gst_element_set_state(pipeline.get(), GST_STATE_PLAYING);
         conn->setRemoteDescription(*answer);
 
-        gtk_widget_add_events(window, GDK_POINTER_MOTION_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | GDK_SCROLL_MASK | GDK_KEY_PRESS_MASK | GDK_KEY_RELEASE_MASK);
-        g_signal_connect(window, "button-press-event", G_CALLBACK(handle_button_cb), this);
-        g_signal_connect(window, "button-release-event", G_CALLBACK(handle_button_cb), this);
-        g_signal_connect(window, "scroll-event", G_CALLBACK(handle_scroll_cb), this);
-        g_signal_connect(window, "key-press-event", G_CALLBACK(handle_key_cb), this);
-        g_signal_connect(window, "key-release-event", G_CALLBACK(handle_key_cb), this);
+        GtkEventController* key_event_controller = gtk_event_controller_key_new();
+        g_signal_connect(key_event_controller, "key-pressed", G_CALLBACK(handle_key_pressed_cb), this);
+        g_signal_connect(key_event_controller, "key-released", G_CALLBACK(handle_key_released_cb), this);
+        gtk_widget_add_controller(window, key_event_controller);
+
+        GtkEventController* scroll_event_controller = gtk_event_controller_scroll_new((GtkEventControllerScrollFlags) (GTK_EVENT_CONTROLLER_SCROLL_BOTH_AXES | GTK_EVENT_CONTROLLER_SCROLL_DISCRETE));
+        g_signal_connect(scroll_event_controller, "scroll", G_CALLBACK(handle_scroll_cb), this);
+        gtk_widget_add_controller(window, scroll_event_controller);
+
+        GtkGesture* click_gesture = gtk_gesture_click_new();
+        gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click_gesture), 0);
+        g_signal_connect(click_gesture, "pressed", G_CALLBACK(handle_button_pressed_cb), this);
+        g_signal_connect(click_gesture, "released", G_CALLBACK(handle_button_released_cb), this);
+        gtk_widget_add_controller(window, GTK_EVENT_CONTROLLER(click_gesture));
 
         if (!client_side_mouse) {
-            display = gdk_display_get_default();
-            seat = gdk_display_get_default_seat(display.get());
-            blank_cursor = gdk_cursor_new_for_display(display.get(), GDK_BLANK_CURSOR);
-            gdk_seat_grab(seat.get(), gtk_widget_get_window(window), GDK_SEAT_CAPABILITY_ALL_POINTING, FALSE, blank_cursor.get(), nullptr, nullptr, nullptr);
-            seat_grabbed = true;
-
-            gtk_widget_add_events(window, GDK_FOCUS_CHANGE_MASK);
-            g_signal_connect(window, "focus-in-event", G_CALLBACK(handle_focus_cb), this);
-            g_signal_connect(window, "focus-out-event", G_CALLBACK(handle_focus_cb), this);
-
-            raw_mouse_manager = std::make_unique<RawMouseManager>();
-            g_timeout_add(17, handle_raw_motion_cb, this);
+            raw_mouse_manager.lock_mouse(gtk_native_get_surface(gtk_widget_get_native(window)));
+            g_signal_connect(window, "notify::is-active", G_CALLBACK(handle_focus_change_cb), this);
+            g_timeout_add(5, handle_raw_motion_cb, this);
         } else {
-            g_signal_connect(window, "motion-notify-event", G_CALLBACK(handle_motion_cb), this);
+            GtkEventController* motion_event_controller = gtk_event_controller_motion_new();
+            g_signal_connect(motion_event_controller, "motion", G_CALLBACK(handle_motion_cb), this);
+            gtk_widget_add_controller(window, motion_event_controller);
         }
+    }
+
+    static void handle_recovery_cb(GObject* rtpulpfecdec, GParamSpec*, gpointer data) {
+        ((Lux*) data)->handle_recovery(rtpulpfecdec);
+    }
+
+    void handle_recovery(GObject* rtpulpfecdec) {
+        guint recovered;
+        g_object_get(rtpulpfecdec, "recovered", &recovered, nullptr);
+        std::cout << "Packets recovered: " << recovered << std::endl;
     }
 
     static GstPadProbeReturn handle_pad_cb(GstPad* pad, GstPadProbeInfo* info, gpointer data) {
@@ -318,42 +378,82 @@ public:
             gst_event_parse_caps(event, &caps);
 
             GstStructure* caps_struct = gst_caps_get_structure(caps, 0);
-            gst_structure_get_int(caps_struct, "width", &width);
-            gst_structure_get_int(caps_struct, "height", &height);
+            gst_structure_get_int(caps_struct, "width", &video_width);
+            gst_structure_get_int(caps_struct, "height", &video_height);
 
             gst_caps_unref(caps);
         }
     }
 
-    static gboolean handle_focus_cb(GtkWidget*, GdkEventFocus* event, gpointer data) {
-        ((Lux*) data)->handle_focus(*event);
-        return FALSE;
+    static gboolean handle_key_pressed_cb(GtkEventControllerKey*, guint keyval, guint keycode, GdkModifierType state, gpointer data) {
+        ((Lux*) data)->handle_key_pressed(keyval, keycode, state);
+        return TRUE;
     }
 
-    void handle_focus(const GdkEventFocus& event) {
-        if (event.in) {
-            gdk_seat_grab(seat.get(), gtk_widget_get_window(window), GDK_SEAT_CAPABILITY_ALL_POINTING, FALSE, blank_cursor.get(), nullptr, nullptr, nullptr);
-        } else {
-            gdk_seat_ungrab(seat.get());
-        }
-        seat_grabbed = event.in;
-    }
-
-    static gboolean handle_motion_cb(GtkWidget*, GdkEventMotion* event, gpointer data) {
-        ((Lux*) data)->handle_motion(*event);
-        return FALSE;
-    }
-
-    void handle_motion(const GdkEventMotion& event) {
+    void handle_key_pressed(guint keyval, guint keycode, GdkModifierType state) {
         if (ordered_channel->isOpen()) {
-            int x;
-            int y;
-            position_in_video(event.x, event.y, width, height, window, x, y);
-
             json message = {
-                {"type", "mousemoveabs"},
-                {"x", x},
-                {"y", y},
+                {"type", "keydown"},
+                {"key", gdk_to_browser_key(keyval)},
+            };
+            ordered_channel->send(message.dump());
+        }
+    }
+
+    static gboolean handle_key_released_cb(GtkEventControllerKey*, guint keyval, guint keycode, GdkModifierType state, gpointer data) {
+        ((Lux*) data)->handle_key_released(keyval, keycode, state);
+        return TRUE;
+    }
+
+    void handle_key_released(guint keyval, guint keycode, GdkModifierType state) {
+        if (ordered_channel->isOpen()) {
+            json message = {
+                {"type", "keyup"},
+                {"key", gdk_to_browser_key(keyval)},
+            };
+            ordered_channel->send(message.dump());
+        }
+    }
+
+    static gboolean handle_scroll_cb(GtkEventControllerScroll*, gdouble x, gdouble y, gpointer data) {
+        ((Lux*) data)->handle_scroll(x, y);
+        return TRUE;
+    }
+
+    void handle_scroll(int x, int y) {
+        if (ordered_channel->isOpen()) {
+            json message = {
+                {"type", "wheel"},
+                {"x", x * 120},
+                {"y", y * 120},
+            };
+            ordered_channel->send(message.dump());
+        }
+    }
+
+    static void handle_button_pressed_cb(GtkGestureClick* click_gesture, gint, gdouble, gdouble, gpointer data) {
+        ((Lux*) data)->handle_button_pressed(click_gesture);
+    }
+
+    void handle_button_pressed(GtkGestureClick* click_gesture) {
+        if (ordered_channel->isOpen()) {
+            json message = {
+                {"type", "mousedown"},
+                {"button", gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(click_gesture)) - 1},
+            };
+            ordered_channel->send(message.dump());
+        }
+    }
+
+    static void handle_button_released_cb(GtkGestureClick* click_gesture, gint, gdouble, gdouble, gpointer data) {
+        ((Lux*) data)->handle_button_released(click_gesture);
+    }
+
+    void handle_button_released(GtkGestureClick* click_gesture) {
+        if (ordered_channel->isOpen()) {
+            json message = {
+                {"type", "mouseup"},
+                {"button", gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(click_gesture)) - 1},
             };
             ordered_channel->send(message.dump());
         }
@@ -365,69 +465,44 @@ public:
     }
 
     void handle_raw_motion() {
-        if (unordered_channel->isOpen() && seat_grabbed && raw_mouse_manager->pending()) {
-            RawMouseEvent raw_event = raw_mouse_manager->next_event();
+        if (unordered_channel->isOpen() && raw_mouse_manager.mouse_locked && raw_mouse_manager.pending()) {
+            RawMouseEvent raw_event = raw_mouse_manager.next_event();
             json message = {
                 {"type", "mousemove"},
-                {"x", (int) raw_event.x / 2},
-                {"y", (int) raw_event.y / 2},
+                {"x", (int) (raw_event.x / 2.5f)},
+                {"y", (int) (raw_event.y / 2.5f)},
             };
             unordered_channel->send(message.dump());
         }
     }
 
-    static gboolean handle_button_cb(GtkWidget*, GdkEventButton* event, gpointer data) {
-        ((Lux*) data)->handle_button(*event);
-        return FALSE;
+    static void handle_focus_change_cb(GObject*, GParamSpec*, gpointer data) {
+        ((Lux*) data)->handle_focus_change();
     }
 
-    void handle_button(const GdkEventButton& event) {
-        if (ordered_channel->isOpen() &&
-            event.type != GDK_2BUTTON_PRESS &&
-            event.type != GDK_3BUTTON_PRESS) {
-            json message = {
-                {"type", event.type == GDK_BUTTON_RELEASE ? "mouseup" : "mousedown"},
-                {"button", event.button - 1},
-            };
-            ordered_channel->send(message.dump());
+    void handle_focus_change() {
+        if (gtk_window_is_active(GTK_WINDOW(window))) {
+            raw_mouse_manager.lock_mouse(gtk_native_get_surface(gtk_widget_get_native(window)));
+        } else {
+            raw_mouse_manager.unlock_mouse(gtk_native_get_surface(gtk_widget_get_native(window)));
         }
     }
 
-    static gboolean handle_scroll_cb(GtkWidget*, GdkEventScroll* event, gpointer data) {
-        ((Lux*) data)->handle_scroll(*event);
-        return FALSE;
+    static gboolean handle_motion_cb(GtkEventControllerMotion*, gdouble x, gdouble y, gpointer data) {
+        ((Lux*) data)->handle_motion(x, y);
+        return TRUE;
     }
 
-    void handle_scroll(const GdkEventScroll& event) {
+    void handle_motion(int x, int y) {
         if (ordered_channel->isOpen()) {
-            scroll_delta_x += event.delta_x;
-            scroll_delta_y += event.delta_y;
-            std::cout << scroll_delta_x << ' ' << scroll_delta_y << std::endl;
+            int translated_x;
+            int translated_y;
+            position_in_video(x, y, translated_x, translated_y);
 
-            if (std::abs(scroll_delta_x) >= 1 || std::abs(scroll_delta_y) >= 1) {
-                json message = {
-                    {"type", "wheel"},
-                    {"x", scroll_delta_x * 120.},
-                    {"y", scroll_delta_y * 120.},
-                };
-                ordered_channel->send(message.dump());
-
-                scroll_delta_x = 0.;
-                scroll_delta_y = 0.;
-            }
-        }
-    }
-
-    static gboolean handle_key_cb(GtkWidget*, GdkEventKey* event, gpointer data) {
-        ((Lux*) data)->handle_key(*event);
-        return FALSE;
-    }
-
-    void handle_key(const GdkEventKey& event) {
-        if (ordered_channel->isOpen()) {
             json message = {
-                {"type", event.type == GDK_KEY_RELEASE ? "keyup" : "keydown"},
-                {"key", gdk_to_browser_key(event.keyval)},
+                {"type", "mousemoveabs"},
+                {"x", translated_x},
+                {"y", translated_y},
             };
             ordered_channel->send(message.dump());
         }
