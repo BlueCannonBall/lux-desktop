@@ -319,7 +319,7 @@ public:
                 avdec_h264,
                 videoconvert,
                 gtk4paintablesink,
-                NULL)) {
+                nullptr)) {
             error("Failed to start streaming", "Error: Failed to link GStreamer elements");
             return;
         }

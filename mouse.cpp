@@ -1,8 +1,8 @@
 #include "mouse.hpp"
 #include <cassert>
-#include <iostream>
 #ifdef _WIN32
-    #include <gdk/x11/gdkx.h>
+    #include <gdk/win32/gdkwin32.h>
+    #include <hidusage.h>
     #include <windows.h>
 #else
     #include <X11/Xlib.h>
@@ -11,18 +11,116 @@
 #endif
 
 #ifdef _WIN32
-struct RawMouseManager::Platform {
+class RawMouseManager::Platform {
+protected:
+    friend class RawMouseManager;
+
+    HINSTANCE instance = nullptr;
+    HWND window = nullptr;
+
+public:
+    Platform() {
+        instance = GetModuleHandle(nullptr);
+        assert(instance);
+
+        WNDCLASS window_class = {0};
+        window_class.lpfnWndProc = DefWindowProc;
+        window_class.hInstance = instance;
+        window_class.lpszClassName = "RawMouseManager";
+        assert(RegisterClass(&window_class));
+
+        window = CreateWindowEx(
+            0,
+            "RawMouseManager",
+            "Raw Input",
+            0,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            nullptr,
+            nullptr,
+            instance,
+            nullptr);
+        assert(window);
+    }
+
+    ~Platform() {
+        if (window) DestroyWindow(window);
+        if (instance) UnregisterClass("RawMouseManager", instance);
+    }
 };
 
 RawMouseManager::RawMouseManager():
     platform(std::make_unique<Platform>()) {
+    RAWINPUTDEVICE device;
+    device.usUsagePage = HID_USAGE_PAGE_GENERIC;
+    device.usUsage = HID_USAGE_GENERIC_MOUSE;
+    device.dwFlags = RIDEV_INPUTSINK;
+    device.hwndTarget = platform->window;
+    assert(RegisterRawInputDevices(&device, 1, sizeof(device)));
+}
+
+RawMouseManager::~RawMouseManager() {
+    RAWINPUTDEVICE device;
+    device.usUsagePage = HID_USAGE_PAGE_GENERIC;
+    device.usUsage = HID_USAGE_GENERIC_MOUSE;
+    device.dwFlags = RIDEV_REMOVE;
+    device.hwndTarget = nullptr;
+    assert(RegisterRawInputDevices(&device, 1, sizeof(device)));
+}
+
+void RawMouseManager::lock_mouse(GdkSurface* surface) {
+    HWND window = GDK_SURFACE_HWND(surface);
+    RECT rect;
+    GetWindowRect(window, &rect);
+    ClipCursor(&rect);
+    mouse_locked = true;
+}
+
+void RawMouseManager::unlock_mouse(GdkSurface*) {
+    if (mouse_locked) {
+        ClipCursor(nullptr);
+        mouse_locked = false;
+    }
+}
+
+bool RawMouseManager::pending() const {
+    MSG message;
+    return PeekMessage(&message, platform->window, 0, 0, PM_NOREMOVE);
+}
+
+RawMouseEvent RawMouseManager::next_event() {
+    RawMouseEvent ret;
+    MSG message;
+    while (PeekMessage(&message, platform->window, 0, 0, PM_REMOVE)) {
+        if (message.message == WM_INPUT) {
+            UINT size;
+            if (GetRawInputData((HRAWINPUT) message.lParam, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER))) {
+                auto data = new BYTE[size];
+                if (GetRawInputData((HRAWINPUT) message.lParam, RID_INPUT, data, &size, sizeof(RAWINPUTHEADER)) == size) {
+                    RAWINPUT* raw_event = (RAWINPUT*) data;
+                    if (raw_event->header.dwType == RIM_TYPEMOUSE) {
+                        RAWMOUSE raw_mouse_event = raw_event->data.mouse;
+                        ret.x += raw_mouse_event.lLastX;
+                        ret.y += raw_mouse_event.lLastY;
+                    }
+                }
+                delete[] data;
+            }
+        } else {
+            TranslateMessage(&message);
+            DispatchMessage(&message);
+        }
+    }
+    return ret;
 }
 #else
 class RawMouseManager::Platform {
 protected:
     friend class RawMouseManager;
 
-    Display* display;
+    Display* display = nullptr;
     int xi_opcode;
 
 public:
@@ -53,6 +151,8 @@ RawMouseManager::RawMouseManager():
     XISelectEvents(platform->display, DefaultRootWindow(platform->display), masks, 1);
     XFlush(platform->display);
 }
+
+RawMouseManager::~RawMouseManager() = default;
 
 void RawMouseManager::lock_mouse(GdkSurface* surface) {
     if (!mouse_locked) {
@@ -135,5 +235,3 @@ RawMouseEvent RawMouseManager::next_event() {
     return ret;
 }
 #endif
-
-RawMouseManager::~RawMouseManager() = default;
