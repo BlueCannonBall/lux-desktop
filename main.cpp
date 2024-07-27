@@ -282,6 +282,7 @@ public:
 #endif
 
 #ifdef _WIN32
+        gst_object_unref(gtk4paintablesink);
         gst_bin_add_many(GST_BIN(pipeline.get()),
             udpsrc,
             rtph264depay,
