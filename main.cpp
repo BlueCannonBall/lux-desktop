@@ -1,4 +1,5 @@
 #include "Polyweb/polyweb.hpp"
+#include "glib.h"
 #include "glib.hpp"
 #include "json.hpp"
 #include "keys.hpp"
@@ -268,12 +269,36 @@ public:
             gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_BOTH, handle_pad_cb, this, nullptr);
         }
 
-        GstElement* videoconvert = gst_element_factory_make("videoconvert", nullptr);
 
         GstElement* gtk4paintablesink = gst_element_factory_make("gtk4paintablesink", nullptr);
         GdkPaintable* paintable;
         g_object_get(gtk4paintablesink, "paintable", &paintable, nullptr);
 
+#ifdef _WIN32
+        GstElement* glsinkbin = gst_element_factory_make("glsinkbin", nullptr);
+        g_object_set(glsinkbin, "sink", gtk4paintablesink, nullptr);
+#else
+        GstElement* videoconvert = gst_element_factory_make("videoconvert", nullptr);
+#endif
+
+#ifdef _WIN32
+        gst_bin_add_many(GST_BIN(pipeline.get()),
+            udpsrc,
+            rtph264depay,
+            queue,
+            avdec_h264,
+            glsinkbin,
+            nullptr);
+        if (!gst_element_link_many(udpsrc,
+                rtph264depay,
+                queue,
+                avdec_h264,
+                glsinkbin,
+                nullptr)) {
+            error("Failed to start streaming", "Error: Failed to link GStreamer elements");
+            return;
+        }
+#else
         gst_bin_add_many(GST_BIN(pipeline.get()),
             udpsrc,
             rtph264depay,
@@ -292,6 +317,7 @@ public:
             error("Failed to start streaming", "Error: Failed to link GStreamer elements");
             return;
         }
+#endif
 
         GtkWidget* video = gtk_picture_new_for_paintable(paintable);
         gtk_window_set_child(GTK_WINDOW(window), video);
