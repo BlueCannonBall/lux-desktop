@@ -16,33 +16,6 @@
 
 using nlohmann::json;
 
-static gboolean bus_call(GstBus* bus,
-    GstMessage* msg,
-    gpointer data) {
-    switch (GST_MESSAGE_TYPE(msg)) {
-    case GST_MESSAGE_EOS:
-        g_print("End of stream\n");
-        break;
-
-    case GST_MESSAGE_ERROR: {
-        gchar* debug;
-        GError* error;
-
-        gst_message_parse_error(msg, &error, &debug);
-        g_free(debug);
-
-        g_printerr("Error: %s\n", error->message);
-        g_error_free(error);
-
-        break;
-    }
-    default:
-        break;
-    }
-
-    return TRUE;
-}
-
 class Lux {
 protected:
     GtkWidget* window;
@@ -301,10 +274,6 @@ public:
         GdkPaintable* paintable;
         g_object_get(gtk4paintablesink, "paintable", &paintable, nullptr);
 
-        GstBus* bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline.get()));
-        gst_bus_add_watch(bus, bus_call, nullptr);
-        gst_object_unref(bus);
-
         gst_bin_add_many(GST_BIN(pipeline.get()),
             udpsrc,
             rtph264depay,
@@ -328,6 +297,7 @@ public:
         gtk_window_set_child(GTK_WINDOW(window), video);
 
         gst_element_set_state(pipeline.get(), GST_STATE_PLAYING);
+        gtk_window_fullscreen(GTK_WINDOW(window));
         conn->setRemoteDescription(*answer);
 
         GtkEventController* key_event_controller = gtk_event_controller_key_new();
@@ -511,7 +481,7 @@ public:
 
 int main(int argc, char* argv[]) {
     pn::init();
-    rtc::InitLogger(rtc::LogLevel::Info);
+    rtc::InitLogger(rtc::LogLevel::Debug);
     gst_init(&argc, &argv);
 
     Lux lux;
