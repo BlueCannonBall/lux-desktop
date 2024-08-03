@@ -31,7 +31,7 @@ protected:
     std::shared_ptr<rtc::DataChannel> unordered_channel;
 
     glib::Object<GstElement> pipeline;
-    pn::UniqueSocket<pn::udp::Client> gst_client;
+    GstElement* appsrc;
     gint video_width;
     gint video_height;
 
@@ -133,11 +133,7 @@ public:
     }
 
     ~Lux() {
-        if (pipeline) {
-            gst_element_set_state(pipeline.get(), GST_STATE_PAUSED);
-            gst_element_set_state(pipeline.get(), GST_STATE_READY);
-            gst_element_set_state(pipeline.get(), GST_STATE_NULL);
-        }
+        if (conn) conn->close();
     }
 
     static void connect_cb(GtkWidget*, gpointer data) {
@@ -187,14 +183,18 @@ public:
     }
 
     void handle_message(rtc::binary message) {
-        if (gst_client->sendto(message.data(), message.size(), nullptr, 0) == PN_ERROR) {
-            g_idle_add(error_cb,
-                new ErrorInfo {
-                    .lux = this,
-                    .primary_text = "Failed to send RTP packet to GStreamer",
-                    .secondary_text = "Error: " + pn::universal_strerror(),
-                    .fatal = true,
-                });
+        GstBuffer* buf = gst_buffer_new_and_alloc(message.size());
+
+        GstMapInfo map;
+        gst_buffer_map(buf, &map, GST_MAP_WRITE);
+        memcpy(map.data, message.data(), message.size());
+        gst_buffer_unmap(buf, &map);
+
+        GstFlowReturn flow;
+        g_signal_emit_by_name(appsrc, "push-buffer", buf, &flow);
+        gst_buffer_unref(buf);
+        if (flow != GST_FLOW_OK) {
+            std::cout << "Error: Flow is " << flow << std::endl;
         }
     }
 
@@ -243,20 +243,11 @@ public:
 
         pipeline = gst_pipeline_new(nullptr);
 
-        GstElement* udpsrc = gst_element_factory_make("udpsrc", nullptr);
+        appsrc = gst_element_factory_make("appsrc", nullptr);
         {
             GstCaps* caps = gst_caps_new_simple("application/x-rtp", "media", G_TYPE_STRING, "video", "encoding-name", G_TYPE_STRING, "H264", "clock-rate", G_TYPE_INT, 90000, nullptr);
-            g_object_set(udpsrc, "caps", caps, "address", "127.0.0.1", nullptr);
+            g_object_set(appsrc, "caps", caps, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, nullptr);
             gst_caps_unref(caps);
-
-            gint port;
-            g_object_get(udpsrc, "port", &port, nullptr);
-            std::cout << "Using port: " << port << std::endl;
-            if (gst_client->connect("127.0.0.1", port) == PN_ERROR) {
-                error("Failed to start streaming", "Error: Failed to connect to GStreamer: " + pn::universal_strerror());
-                gst_object_unref(udpsrc);
-                return;
-            }
         }
 
         GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
@@ -268,7 +259,6 @@ public:
             glib::Object<GstPad> pad = gst_element_get_static_pad(avdec_h264, "src");
             gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_BOTH, handle_pad_cb, this, nullptr);
         }
-
 
         GstElement* gtk4paintablesink = gst_element_factory_make("gtk4paintablesink", nullptr);
         GdkPaintable* paintable;
@@ -284,13 +274,13 @@ public:
 #ifdef _WIN32
         gst_object_unref(gtk4paintablesink);
         gst_bin_add_many(GST_BIN(pipeline.get()),
-            udpsrc,
+            appsrc,
             rtph264depay,
             queue,
             avdec_h264,
             glsinkbin,
             nullptr);
-        if (!gst_element_link_many(udpsrc,
+        if (!gst_element_link_many(appsrc,
                 rtph264depay,
                 queue,
                 avdec_h264,
@@ -301,14 +291,14 @@ public:
         }
 #else
         gst_bin_add_many(GST_BIN(pipeline.get()),
-            udpsrc,
+            appsrc,
             rtph264depay,
             queue,
             avdec_h264,
             videoconvert,
             gtk4paintablesink,
             nullptr);
-        if (!gst_element_link_many(udpsrc,
+        if (!gst_element_link_many(appsrc,
                 rtph264depay,
                 queue,
                 avdec_h264,
@@ -324,7 +314,7 @@ public:
         gtk_window_set_child(GTK_WINDOW(window), video);
 
         gst_element_set_state(pipeline.get(), GST_STATE_PLAYING);
-        gtk_window_fullscreen(GTK_WINDOW(window));
+        // gtk_window_fullscreen(GTK_WINDOW(window));
         conn->setRemoteDescription(*answer);
 
         GtkEventController* key_event_controller = gtk_event_controller_key_new();
@@ -351,16 +341,6 @@ public:
             g_signal_connect(motion_event_controller, "motion", G_CALLBACK(handle_motion_cb), this);
             gtk_widget_add_controller(window, motion_event_controller);
         }
-    }
-
-    static void handle_recovery_cb(GObject* rtpulpfecdec, GParamSpec*, gpointer data) {
-        ((Lux*) data)->handle_recovery(rtpulpfecdec);
-    }
-
-    void handle_recovery(GObject* rtpulpfecdec) {
-        guint recovered;
-        g_object_get(rtpulpfecdec, "recovered", &recovered, nullptr);
-        std::cout << "Packets recovered: " << recovered << std::endl;
     }
 
     static GstPadProbeReturn handle_pad_cb(GstPad* pad, GstPadProbeInfo* info, gpointer data) {
