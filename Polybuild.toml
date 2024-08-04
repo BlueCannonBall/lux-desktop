@@ -9,6 +9,8 @@ install = "/usr/local/bin"
 [options]
 compilation-flags = "-Wall -Wno-unused-command-line-argument -std=c++17 -O3 `pkg-config --cflags --libs gtk4` `pkg-config --cflags --libs gstreamer-1.0`"
 libraries = ["Xi", "X11", "datachannel", "ssl", "crypto"]
+preludes = ["cd libdatachannel && cmake -B build -DUSE_GNUTLS=0 -DUSE_NICE=0 -DCMAKE_BUILD_TYPE=Release > /dev/null && cd build && $(MAKE) datachannel"]
+clean-preludes = ["rm -rf libdatachannel/build"]
 
 [env.OS.Windows_NT.options]
 libraries = ["datachannel", "ssl", "crypto", "ws2_32"]

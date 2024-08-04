@@ -74,10 +74,14 @@ obj/secure_sockets_0.o: Polyweb/Polynet/secure_sockets.cpp Polyweb/Polynet/secur
 
 lux-desktop: obj/main_0.o obj/keys_0.o obj/mouse_0.o obj/string_0.o obj/client_0.o obj/polyweb_0.o obj/websocket_0.o obj/server_0.o obj/polynet_0.o obj/secure_sockets_0.o
 	@printf '\033[1m[POLYBUILD]\033[0m Building $@...\n'
-	@$(compiler) $^ $(compilation_flags) $(libraries) -o $@
+	@printf '\033[1m[POLYBUILD]\033[0m Executing prelude: cd libdatachannel && cmake -B build -DUSE_GNUTLS=0 -DUSE_NICE=0 -DCMAKE_BUILD_TYPE=Release > /dev/null && cd build && $(MAKE) datachannel\n'
+	@cd libdatachannel && cmake -B build -DUSE_GNUTLS=0 -DUSE_NICE=0 -DCMAKE_BUILD_TYPE=Release > /dev/null && cd build && $(MAKE) datachannel
+	@$(compiler) $^ $(compilation_flags) $(libraries) $(static_libraries) -o $@
 	@printf '\033[1m[POLYBUILD]\033[0m Finished building $@!\n'
 
 clean:
+	@printf '\033[1m[POLYBUILD]\033[0m Executing clean prelude: rm -rf libdatachannel/build\n'
+	@rm -rf libdatachannel/build
 	@printf '\033[1m[POLYBUILD]\033[0m Deleting lux-desktop and obj...\n'
 	@rm -rf lux-desktop obj
 	@printf '\033[1m[POLYBUILD]\033[0m Finished deleting lux-desktop and obj!\n'
