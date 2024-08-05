@@ -1,6 +1,6 @@
 #pragma once
 
 #include <glib.h>
-#include <string>
+#include <string_view>
 
-std::string gdk_to_browser_key(guint key);
+std::string_view gdk_to_browser_key(guint key);

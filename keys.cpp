@@ -1,7 +1,7 @@
 #include "keys.hpp"
 #include <gdk/gdkkeysyms.h>
 
-std::string gdk_to_browser_key(guint key) {
+std::string_view gdk_to_browser_key(guint key) {
     switch (key) {
     // Basic keys
     case GDK_KEY_Escape: return "Escape";
