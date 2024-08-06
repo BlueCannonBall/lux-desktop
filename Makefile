@@ -77,7 +77,7 @@ lux-desktop: obj/main_0.o obj/keys_0.o obj/mouse_0.o obj/string_0.o obj/client_0
 	@printf '\033[1m[POLYBUILD]\033[0m Building $@...\n'
 	@printf '\033[1m[POLYBUILD]\033[0m Executing prelude: cd libdatachannel && cmake -B build -DUSE_GNUTLS=0 -DUSE_NICE=0 -DCMAKE_BUILD_TYPE=Release > /dev/null && cd build && $(MAKE) datachannel-static\n'
 	@cd libdatachannel && cmake -B build -DUSE_GNUTLS=0 -DUSE_NICE=0 -DCMAKE_BUILD_TYPE=Release > /dev/null && cd build && $(MAKE) datachannel-static
-	@$(compiler) $^ $(compilation_flags) $(libraries) $(static_libraries) -o $@
+	@$(compiler) $^ $(static_libraries) $(compilation_flags) $(libraries) -o $@
 	@printf '\033[1m[POLYBUILD]\033[0m Finished building $@!\n'
 
 clean:

@@ -23,6 +23,7 @@ protected:
     GtkWidget* window;
     GtkWidget* address_entry;
     GtkWidget* password_entry;
+    GtkWidget* bitrate_spin_button;
     GtkWidget* client_side_mouse_check_button;
 
     std::shared_ptr<rtc::PeerConnection> conn;
@@ -33,10 +34,12 @@ protected:
 
     glib::Object<GstElement> pipeline;
     GstElement* appsrc;
+
+    unsigned int bitrate;
+    bool client_side_mouse;
+
     gint video_width;
     gint video_height;
-
-    bool client_side_mouse;
     RawMouseManager raw_mouse_manager;
 
     struct ErrorInfo {
@@ -118,6 +121,17 @@ public:
         glib::connect_signal(password_entry, "activate", std::bind(&Lux::connect, this, _1));
         gtk_box_append(GTK_BOX(vbox.get()), password_entry);
 
+        {
+            glib::Object<GtkWidget> hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+            glib::Object<GtkWidget> title_label = gtk_label_new("Bitrate (Kbps) ");
+            bitrate_spin_button = gtk_spin_button_new_with_range(250, 10000, 1);
+            gtk_spin_button_set_value(GTK_SPIN_BUTTON(bitrate_spin_button), 4000);
+            // gtk_widget_set_hexpand(bitrate_spin_button, TRUE);
+            gtk_box_append(GTK_BOX(hbox.get()), title_label.release());
+            gtk_box_append(GTK_BOX(hbox.get()), bitrate_spin_button);
+            gtk_box_append(GTK_BOX(vbox.get()), hbox.release());
+        }
+
         client_side_mouse_check_button = gtk_check_button_new_with_label("Client-side mouse");
         gtk_box_append(GTK_BOX(vbox.get()), client_side_mouse_check_button);
 
@@ -145,6 +159,7 @@ public:
         track->setRtcpHandler(session);
         track->onMessage(std::bind(&Lux::handle_message, this, _1), nullptr);
 
+        bitrate = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(bitrate_spin_button));
         client_side_mouse = gtk_check_button_get_active(GTK_CHECK_BUTTON(client_side_mouse_check_button));
 
         ordered_channel = conn->createDataChannel("ordered-input");
@@ -162,6 +177,9 @@ public:
 
     void handle_state_change(rtc::PeerConnection::State state) {
         std::cout << "State: " << state << std::endl;
+        if (state == rtc::PeerConnection::State::Connected) {
+            track->requestBitrate(bitrate * 1000);
+        }
     }
 
     void handle_gathering_state_change(rtc::PeerConnection::GatheringState state) {
@@ -302,7 +320,6 @@ public:
         gtk_window_set_child(GTK_WINDOW(window), video);
 
         gst_element_set_state(pipeline.get(), GST_STATE_PLAYING);
-        // gtk_window_fullscreen(GTK_WINDOW(window));
         conn->setRemoteDescription(*answer);
 
         GdkSurface* surface = gtk_native_get_surface(gtk_widget_get_native(window));
@@ -357,7 +374,9 @@ public:
     }
 
     gboolean handle_key_pressed(GtkEventController*, guint keyval, guint keycode, GdkModifierType state) {
-        if (ordered_channel->isOpen()) {
+        if (keyval == GDK_KEY_F11) {
+            g_object_set(window, "fullscreened", !gtk_window_is_fullscreen(GTK_WINDOW(window)), nullptr);
+        } else if (ordered_channel->isOpen()) {
             json message = {
                 {"type", "keydown"},
                 {"key", gdk_to_browser_key(keyval)},
@@ -368,7 +387,7 @@ public:
     }
 
     gboolean handle_key_released(GtkEventController*, guint keyval, guint keycode, GdkModifierType state) {
-        if (ordered_channel->isOpen()) {
+        if (keyval != GDK_KEY_F11 && ordered_channel->isOpen()) {
             json message = {
                 {"type", "keyup"},
                 {"key", gdk_to_browser_key(keyval)},
@@ -462,7 +481,7 @@ public:
 
 int main(int argc, char* argv[]) {
     pn::init();
-    rtc::InitLogger(rtc::LogLevel::Info);
+    rtc::InitLogger(rtc::LogLevel::Warning);
     gst_init(&argc, &argv);
 
     Lux lux;
