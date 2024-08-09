@@ -6,16 +6,16 @@ artifact = "obj"
 install = "/usr/local/bin"
 
 [options]
-compilation-flags = "-Wall -Wno-unused-command-line-argument -std=c++17 -O3 `pkg-config --cflags --libs gtk4 gstreamer-1.0`"
-libraries = ["Xi", "X11", "ssl", "crypto"]
+compilation-flags = "-Wall -Wno-unused-command-line-argument -std=c++17 -O3 `pkg-config --cflags --libs gtk4 gstreamer-1.0 gstreamer-app-1.0`"
+libraries = ["SDL2", "GLEW", "GL",  "Xi", "X11", "ssl", "crypto"]
 static-libraries = [
 	"libdatachannel/build/libdatachannel-static.a",
 	"libdatachannel/build/deps/libjuice/libjuice-static.a",
 	"libdatachannel/build/deps/libsrtp/libsrtp2.a",
 	"libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a"
 ]
-preludes = ["cd libdatachannel && cmake -B build -DUSE_GNUTLS=0 -DUSE_NICE=0 -DCMAKE_BUILD_TYPE=Release > /dev/null && cd build && $(MAKE) datachannel-static"]
+preludes = ["cd libdatachannel && cmake -B build -G \"Unix Makefiles\" -DUSE_GNUTLS=0 -DUSE_NICE=0 -DCMAKE_BUILD_TYPE=Release && cd build && $(MAKE) datachannel-static"]
 clean-preludes = ["rm -rf libdatachannel/build"]
 
 [env.OS.Windows_NT.options]
-libraries = ["ssl", "crypto", "ws2_32"]
+libraries = ["SDL2", "GLEW", "GL", "ssl", "crypto", "ws2_32"]

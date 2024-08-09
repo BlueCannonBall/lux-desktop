@@ -1,175 +1,161 @@
 #include "keys.hpp"
-#include <gdk/gdkkeysyms.h>
 
-std::string_view gdk_to_browser_key(guint key) {
+std::string_view sdl_to_browser_key(SDL_Keycode key) {
     switch (key) {
-    // Basic keys
-    case GDK_KEY_Escape: return "Escape";
-    case GDK_KEY_BackSpace: return "Backspace";
-    case GDK_KEY_Tab: return "Tab";
-    case GDK_KEY_Return:
-    case GDK_KEY_KP_Enter: return "Enter";
-    case GDK_KEY_Control_L: return "ControlLeft";
-    case GDK_KEY_Control_R: return "ControlRight";
-    case GDK_KEY_Shift_L: return "ShiftLeft";
-    case GDK_KEY_Shift_R: return "ShiftRight";
-    case GDK_KEY_Alt_L: return "AltLeft";
-    case GDK_KEY_Alt_R: return "AltRight";
-    case GDK_KEY_Caps_Lock: return "CapsLock";
-    case GDK_KEY_space: return "Space";
-
-    // Digits and their shifted symbols
-    case GDK_KEY_0:
-    case GDK_KEY_KP_0:
-    case GDK_KEY_parenright: return "Digit0";
-    case GDK_KEY_1:
-    case GDK_KEY_KP_1:
-    case GDK_KEY_exclam: return "Digit1";
-    case GDK_KEY_2:
-    case GDK_KEY_KP_2:
-    case GDK_KEY_at: return "Digit2";
-    case GDK_KEY_3:
-    case GDK_KEY_KP_3:
-    case GDK_KEY_numbersign: return "Digit3";
-    case GDK_KEY_4:
-    case GDK_KEY_KP_4:
-    case GDK_KEY_dollar: return "Digit4";
-    case GDK_KEY_5:
-    case GDK_KEY_KP_5:
-    case GDK_KEY_percent: return "Digit5";
-    case GDK_KEY_6:
-    case GDK_KEY_KP_6:
-    case GDK_KEY_asciicircum: return "Digit6";
-    case GDK_KEY_7:
-    case GDK_KEY_KP_7:
-    case GDK_KEY_ampersand: return "Digit7";
-    case GDK_KEY_8:
-    case GDK_KEY_KP_8:
-    case GDK_KEY_asterisk: return "Digit8";
-    case GDK_KEY_9:
-    case GDK_KEY_KP_9:
-    case GDK_KEY_parenleft: return "Digit9";
-
-    // Letters
-    case GDK_KEY_a:
-    case GDK_KEY_A: return "KeyA";
-    case GDK_KEY_b:
-    case GDK_KEY_B: return "KeyB";
-    case GDK_KEY_c:
-    case GDK_KEY_C: return "KeyC";
-    case GDK_KEY_d:
-    case GDK_KEY_D: return "KeyD";
-    case GDK_KEY_e:
-    case GDK_KEY_E: return "KeyE";
-    case GDK_KEY_f:
-    case GDK_KEY_F: return "KeyF";
-    case GDK_KEY_g:
-    case GDK_KEY_G: return "KeyG";
-    case GDK_KEY_h:
-    case GDK_KEY_H: return "KeyH";
-    case GDK_KEY_i:
-    case GDK_KEY_I: return "KeyI";
-    case GDK_KEY_j:
-    case GDK_KEY_J: return "KeyJ";
-    case GDK_KEY_k:
-    case GDK_KEY_K: return "KeyK";
-    case GDK_KEY_l:
-    case GDK_KEY_L: return "KeyL";
-    case GDK_KEY_m:
-    case GDK_KEY_M: return "KeyM";
-    case GDK_KEY_n:
-    case GDK_KEY_N: return "KeyN";
-    case GDK_KEY_o:
-    case GDK_KEY_O: return "KeyO";
-    case GDK_KEY_p:
-    case GDK_KEY_P: return "KeyP";
-    case GDK_KEY_q:
-    case GDK_KEY_Q: return "KeyQ";
-    case GDK_KEY_r:
-    case GDK_KEY_R: return "KeyR";
-    case GDK_KEY_s:
-    case GDK_KEY_S: return "KeyS";
-    case GDK_KEY_t:
-    case GDK_KEY_T: return "KeyT";
-    case GDK_KEY_u:
-    case GDK_KEY_U: return "KeyU";
-    case GDK_KEY_v:
-    case GDK_KEY_V: return "KeyV";
-    case GDK_KEY_w:
-    case GDK_KEY_W: return "KeyW";
-    case GDK_KEY_x:
-    case GDK_KEY_X: return "KeyX";
-    case GDK_KEY_y:
-    case GDK_KEY_Y: return "KeyY";
-    case GDK_KEY_z:
-    case GDK_KEY_Z: return "KeyZ";
-
-    // Function keys
-    case GDK_KEY_F1: return "F1";
-    case GDK_KEY_F2: return "F2";
-    case GDK_KEY_F3: return "F3";
-    case GDK_KEY_F4: return "F4";
-    case GDK_KEY_F5: return "F5";
-    case GDK_KEY_F6: return "F6";
-    case GDK_KEY_F7: return "F7";
-    case GDK_KEY_F8: return "F8";
-    case GDK_KEY_F9: return "F9";
-    case GDK_KEY_F10: return "F10";
-    case GDK_KEY_F11: return "F11";
-    case GDK_KEY_F12: return "F12";
-
-    // Punctuation and symbols (including shifted versions)
-    case GDK_KEY_grave:
-    case GDK_KEY_asciitilde: return "Backquote";
-    case GDK_KEY_minus:
-    case GDK_KEY_underscore: return "Minus";
-    case GDK_KEY_equal:
-    case GDK_KEY_plus: return "Equal";
-    case GDK_KEY_bracketleft:
-    case GDK_KEY_braceleft: return "BracketLeft";
-    case GDK_KEY_bracketright:
-    case GDK_KEY_braceright: return "BracketRight";
-    case GDK_KEY_backslash:
-    case GDK_KEY_bar: return "Backslash";
-    case GDK_KEY_semicolon:
-    case GDK_KEY_colon: return "Semicolon";
-    case GDK_KEY_apostrophe:
-    case GDK_KEY_quotedbl: return "Quote";
-    case GDK_KEY_comma:
-    case GDK_KEY_less: return "Comma";
-    case GDK_KEY_period:
-    case GDK_KEY_greater: return "Period";
-    case GDK_KEY_slash:
-    case GDK_KEY_question: return "Slash";
-
-    // Numpad
-    case GDK_KEY_Num_Lock: return "NumLock";
-    case GDK_KEY_KP_Multiply: return "NumpadMultiply";
-    case GDK_KEY_KP_Add: return "NumpadAdd";
-    case GDK_KEY_KP_Subtract: return "NumpadSubtract";
-    case GDK_KEY_KP_Decimal: return "NumpadDecimal";
-    case GDK_KEY_KP_Divide: return "NumpadDivide";
-
-    // Navigation keys
-    case GDK_KEY_Home: return "Home";
-    case GDK_KEY_End: return "End";
-    case GDK_KEY_Page_Up: return "PageUp";
-    case GDK_KEY_Page_Down: return "PageDown";
-    case GDK_KEY_Insert: return "Insert";
-    case GDK_KEY_Delete: return "Delete";
-    case GDK_KEY_Left: return "ArrowLeft";
-    case GDK_KEY_Up: return "ArrowUp";
-    case GDK_KEY_Right: return "ArrowRight";
-    case GDK_KEY_Down: return "ArrowDown";
-
-    // Miscellaneous keys
-    case GDK_KEY_Print: return "PrintScreen";
-    case GDK_KEY_Scroll_Lock: return "ScrollLock";
-    case GDK_KEY_Pause: return "Pause";
-    case GDK_KEY_Super_L: return "MetaLeft";
-    case GDK_KEY_Super_R: return "MetaRight";
-    case GDK_KEY_Menu: return "ContextMenu";
-
     default: return "Unidentified";
+    case SDLK_ESCAPE: return "Escape";
+    case SDLK_1: return "Digit1";
+    case SDLK_2: return "Digit2";
+    case SDLK_3: return "Digit3";
+    case SDLK_4: return "Digit4";
+    case SDLK_5: return "Digit5";
+    case SDLK_6: return "Digit6";
+    case SDLK_7: return "Digit7";
+    case SDLK_8: return "Digit8";
+    case SDLK_9: return "Digit9";
+    case SDLK_0: return "Digit0";
+    case SDLK_MINUS: return "Minus";
+    case SDLK_EQUALS: return "Equal";
+    case SDLK_BACKSPACE: return "Backspace";
+    case SDLK_TAB: return "Tab";
+    case SDLK_q: return "KeyQ";
+    case SDLK_w: return "KeyW";
+    case SDLK_e: return "KeyE";
+    case SDLK_r: return "KeyR";
+    case SDLK_t: return "KeyT";
+    case SDLK_y: return "KeyY";
+    case SDLK_u: return "KeyU";
+    case SDLK_i: return "KeyI";
+    case SDLK_o: return "KeyO";
+    case SDLK_p: return "KeyP";
+    case SDLK_LEFTBRACKET: return "BracketLeft";
+    case SDLK_RIGHTBRACKET: return "BracketRight";
+    case SDLK_RETURN: return "Enter";
+    case SDLK_LCTRL: return "ControlLeft";
+    case SDLK_a: return "KeyA";
+    case SDLK_s: return "KeyS";
+    case SDLK_d: return "KeyD";
+    case SDLK_f: return "KeyF";
+    case SDLK_g: return "KeyG";
+    case SDLK_h: return "KeyH";
+    case SDLK_j: return "KeyJ";
+    case SDLK_k: return "KeyK";
+    case SDLK_l: return "KeyL";
+    case SDLK_SEMICOLON: return "Semicolon";
+    case SDLK_QUOTE: return "Quote";
+    case SDLK_BACKQUOTE: return "Backquote";
+    case SDLK_LSHIFT: return "ShiftLeft";
+    case SDLK_BACKSLASH: return "Backslash";
+    case SDLK_z: return "KeyZ";
+    case SDLK_x: return "KeyX";
+    case SDLK_c: return "KeyC";
+    case SDLK_v: return "KeyV";
+    case SDLK_b: return "KeyB";
+    case SDLK_n: return "KeyN";
+    case SDLK_m: return "KeyM";
+    case SDLK_COMMA: return "Comma";
+    case SDLK_PERIOD: return "Period";
+    case SDLK_SLASH: return "Slash";
+    case SDLK_RSHIFT: return "ShiftRight";
+    case SDLK_KP_MULTIPLY: return "NumpadMultiply";
+    case SDLK_LALT: return "AltLeft";
+    case SDLK_SPACE: return "Space";
+    case SDLK_CAPSLOCK: return "CapsLock";
+    case SDLK_F1: return "F1";
+    case SDLK_F2: return "F2";
+    case SDLK_F3: return "F3";
+    case SDLK_F4: return "F4";
+    case SDLK_F5: return "F5";
+    case SDLK_F6: return "F6";
+    case SDLK_F7: return "F7";
+    case SDLK_F8: return "F8";
+    case SDLK_F9: return "F9";
+    case SDLK_F10: return "F10";
+    case SDLK_NUMLOCKCLEAR: return "NumLock";
+    case SDLK_SCROLLLOCK: return "ScrollLock";
+    case SDLK_KP_7: return "Numpad7";
+    case SDLK_KP_8: return "Numpad8";
+    case SDLK_KP_9: return "Numpad9";
+    case SDLK_KP_MINUS: return "NumpadSubtract";
+    case SDLK_KP_4: return "Numpad4";
+    case SDLK_KP_5: return "Numpad5";
+    case SDLK_KP_6: return "Numpad6";
+    case SDLK_KP_PLUS: return "NumpadAdd";
+    case SDLK_KP_1: return "Numpad1";
+    case SDLK_KP_2: return "Numpad2";
+    case SDLK_KP_3: return "Numpad3";
+    case SDLK_KP_0: return "Numpad0";
+    case SDLK_KP_PERIOD: return "NumpadDecimal";
+    case SDLK_KP_ENTER: return "NumpadEnter";
+    case SDLK_RCTRL: return "ControlRight";
+    case SDLK_KP_DIVIDE: return "NumpadDivide";
+    case SDLK_PRINTSCREEN: return "PrintScreen";
+    case SDLK_RALT: return "AltRight";
+    case SDLK_HOME: return "Home";
+    case SDLK_UP: return "ArrowUp";
+    case SDLK_PAGEUP: return "PageUp";
+    case SDLK_LEFT: return "ArrowLeft";
+    case SDLK_RIGHT: return "ArrowRight";
+    case SDLK_END: return "End";
+    case SDLK_DOWN: return "ArrowDown";
+    case SDLK_PAGEDOWN: return "PageDown";
+    case SDLK_INSERT: return "Insert";
+    case SDLK_DELETE: return "Delete";
+    case SDLK_PAUSE: return "Pause";
+    case SDLK_VOLUMEUP: return "AudioVolumeUp";
+    case SDLK_VOLUMEDOWN: return "AudioVolumeDown";
+    case SDLK_MUTE: return "AudioVolumeMute";
+    case SDLK_KP_EQUALS: return "NumpadEqual";
+    case SDLK_KP_COMMA: return "NumpadComma";
+    case SDLK_KP_LEFTPAREN: return "NumpadParenLeft";
+    case SDLK_KP_RIGHTPAREN: return "NumpadParenRight";
+    case SDLK_F11: return "F11";
+    case SDLK_F12: return "F12";
+    case SDLK_F13: return "F13";
+    case SDLK_F14: return "F14";
+    case SDLK_F15: return "F15";
+    case SDLK_F16: return "F16";
+    case SDLK_F17: return "F17";
+    case SDLK_F18: return "F18";
+    case SDLK_F19: return "F19";
+    case SDLK_F20: return "F20";
+    case SDLK_F21: return "F21";
+    case SDLK_F22: return "F22";
+    case SDLK_F23: return "F23";
+    case SDLK_F24: return "F24";
+    case SDLK_APPLICATION: return "ContextMenu";
+    case SDLK_POWER: return "Power";
+    case SDLK_HELP: return "Help";
+    case SDLK_MENU: return "Select";
+    case SDLK_STOP: return "BrowserStop";
+    case SDLK_AGAIN: return "Again";
+    case SDLK_UNDO: return "Undo";
+    case SDLK_CUT: return "Cut";
+    case SDLK_COPY: return "Copy";
+    case SDLK_PASTE: return "Paste";
+    case SDLK_FIND: return "Find";
+    case SDLK_LGUI: return "MetaLeft";
+    case SDLK_RGUI: return "MetaRight";
+    case SDLK_WWW: return "BrowserSearch";
+    case SDLK_MAIL: return "LaunchMail";
+    case SDLK_CALCULATOR: return "Calculator";
+    case SDLK_COMPUTER: return "Computer";
+    case SDLK_AC_SEARCH: return "BrowserSearch";
+    case SDLK_AC_HOME: return "BrowserHome";
+    case SDLK_AC_BACK: return "BrowserBack";
+    case SDLK_AC_FORWARD: return "BrowserForward";
+    case SDLK_AC_STOP: return "BrowserStop";
+    case SDLK_AC_REFRESH: return "BrowserRefresh";
+    case SDLK_AC_BOOKMARKS: return "BrowserFavorites";
+    case SDLK_BRIGHTNESSDOWN: return "BrightnessDown";
+    case SDLK_BRIGHTNESSUP: return "BrightnessUp";
+    case SDLK_DISPLAYSWITCH: return "DisplaySwitch";
+    case SDLK_KBDILLUMTOGGLE: return "KeyboardIlluminationToggle";
+    case SDLK_KBDILLUMDOWN: return "KeyboardIlluminationDown";
+    case SDLK_KBDILLUMUP: return "KeyboardIlluminationUp";
+    case SDLK_EJECT: return "Eject";
+    case SDLK_SLEEP: return "Sleep";
+    case SDLK_APP1: return "LaunchApp1";
+    case SDLK_APP2: return "LaunchApp2";
     }
 }
