@@ -1,15 +1,17 @@
 #include "Polyweb/polyweb.hpp"
-#include "config.hpp"
 #include "glib.hpp"
 #include "json.hpp"
+#include "setup.hpp"
 #include "video.hpp"
 // #include "keys.hpp"
 // #include "mouse.hpp"
+#include <FL/Fl.H>
+#include <FL/fl_ask.H>
+#include <cinttypes>
 #include <condition_variable>
 #include <cstring>
 #include <gst/app/gstappsink.h>
 #include <gst/gst.h>
-#include <gtk/gtk.h>
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -41,7 +43,6 @@ struct VideoInfo {
 };
 
 int main(int argc, char* argv[]) {
-    gtk_init();
     rtc::InitLogger(rtc::LogLevel::Warning);
     pn::init();
     gst_init(&argc, &argv);
@@ -61,11 +62,12 @@ int main(int argc, char* argv[]) {
          ordered_channel.reset(),
          unordered_channel.reset(),
          pipeline.reset()) {
-        ConfigWindow config_window;
-        if (!config_window.run()) {
+        SetupWindow setup_window;
+        if (!setup_window.run()) {
             return 0;
         }
-        client_side_mouse = config_window.client_side_mouse;
+        Fl::check(); // Ensure that the window is hidden
+        client_side_mouse = setup_window.client_side_mouse;
 
         rtc::Configuration config;
         config.iceServers.emplace_back("stun.l.google.com:19302");
@@ -86,7 +88,7 @@ int main(int argc, char* argv[]) {
                 },
             });
 
-        conn->onStateChange([track, bitrate = config_window.bitrate](rtc::PeerConnection::State state) {
+        conn->onStateChange([track, bitrate = setup_window.bitrate](rtc::PeerConnection::State state) {
             std::cout << "State: " << state << std::endl;
             if (state == rtc::PeerConnection::State::Connected) {
                 track->requestBitrate(bitrate * 1000);
@@ -119,18 +121,18 @@ int main(int argc, char* argv[]) {
         }
 
         json req_body_json = {
-            {"password", config_window.password},
+            {"password", setup_window.password},
             {"show_mouse", !client_side_mouse},
             {"offer", pw::base64_encode(offer.data(), offer.size())},
         };
         std::cout << "Sending offer: " << req_body_json << std::endl;
 
         pw::HTTPResponse resp;
-        if (pw::fetch("POST", "http://" + config_window.address + "/offer", resp, req_body_json.dump(), {{"Content-Type", "application/json"}}) == PN_ERROR) {
-            error("Failed to connect", "Error: " + pw::universal_strerror());
+        if (pw::fetch("POST", "http://" + setup_window.address + "/offer", resp, req_body_json.dump(), {{"Content-Type", "application/json"}}) == PN_ERROR) {
+            fl_alert("Failed to connect: %s", pw::universal_strerror().c_str());
             continue;
         } else if (resp.status_code != 200) {
-            error("Failed to login", "Error: Response has status code " + std::to_string(resp.status_code));
+            fl_alert("Failed to login: Response has status code %" PRIu16, resp.status_code);
             continue;
         }
 
@@ -141,7 +143,7 @@ int main(int argc, char* argv[]) {
             answer_json = json::parse(sdp_data);
             answer = std::make_unique<rtc::Description>(answer_json["sdp"].get<std::string>(), answer_json["type"].get<std::string>());
         } catch (const std::exception& e) {
-            error("Failed to start streaming", "Error: Failed to parse server answer: " + std::string(e.what()));
+            fl_alert("Failed to start streaming: Failed to parse server answer: %s", e.what());
             continue;
         }
 
@@ -231,7 +233,7 @@ int main(int argc, char* argv[]) {
                 videoconvert,
                 appsink,
                 nullptr)) {
-            error("Failed to start streaming", "Error: Failed to link GStreamer elements");
+            fl_alert("Failed to link GStreamer elements");
             continue;
         }
 
