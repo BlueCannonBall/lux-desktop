@@ -26,6 +26,7 @@ public:
         while (shown()) {
             Fl::wait();
         }
+        Fl::check();
         return config_complete;
     }
 

@@ -64,7 +64,6 @@ int main(int argc, char* argv[]) {
         if (!setup_window.run()) {
             return 0;
         }
-        Fl::check(); // Ensure that the window is hidden
         client_side_mouse = setup_window.client_side_mouse;
 
         rtc::Configuration config;

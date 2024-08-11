@@ -18,7 +18,7 @@ public:
     const int video_height;
     const bool client_side_mouse;
 
-    VideoWindow(int video_width, int video_height, bool client_side_mouse = false, int window_width = 800, int window_height = 450):
+    VideoWindow(int video_width, int video_height, bool client_side_mouse = false, int window_width = 960, int window_height = 540):
         video_width(video_width),
         video_height(video_height),
         client_side_mouse(client_side_mouse) {
