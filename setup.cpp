@@ -58,7 +58,7 @@ SetupWindow::SetupWindow():
 
     client_side_mouse_check_button = new Fl_Check_Button(0, 0, 0, 0, "Client-side mouse");
 
-    login_button = new Fl_Button(0, 0, 0, 0, "Login @>");
+    login_button = new Fl_Button(0, 0, 0, 0, "Login@>");
     login_button->callback([](Fl_Widget* widget, void* data) {
         auto setup_window = (SetupWindow*) data;
         setup_window->complete();
