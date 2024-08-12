@@ -104,6 +104,10 @@ void VideoWindow::window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) 
 void VideoWindow::run(std::mutex& sample_mutex, GstSample** sample, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
     SDL_GL_MakeCurrent(window, gl_context);
 
+    const GLubyte* vendor = glGetString(GL_VENDOR);     // Returns the vendor
+    const GLubyte* renderer = glGetString(GL_RENDERER); // Returns a hint to the model
+    std::cout << vendor << ' ' << renderer << std::endl;
+
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertex_src, nullptr);
     glCompileShader(vertex_shader);

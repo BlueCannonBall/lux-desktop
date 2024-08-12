@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <array>
+#include <cassert>
 #include <gst/gstsample.h>
 #include <memory>
 #include <mutex>
@@ -26,6 +27,7 @@ public:
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+        SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
         window = SDL_CreateWindow("Lux Desktop", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
         SDL_SetRelativeMouseMode(client_side_mouse ? SDL_FALSE : SDL_TRUE);
@@ -33,6 +35,7 @@ public:
         SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
 
         gl_context = SDL_GL_CreateContext(window);
+        glewExperimental = GL_TRUE;
         glewInit();
     }
     VideoWindow(const VideoWindow&) = delete;
