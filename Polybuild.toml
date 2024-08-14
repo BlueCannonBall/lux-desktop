@@ -6,21 +6,27 @@ artifact = "obj"
 install = "/usr/local/bin"
 
 [options]
-compilation-flags = "-Wall -Wno-unused-command-line-argument -std=c++17 -O3 `pkg-config --cflags --libs gstreamer-1.0 gstreamer-app-1.0`"
-libraries = ["fltk", "SDL2", "GLEW", "GL", "ssl", "crypto"]
+compilation-flags = "-Wall -std=c++17 -O3"
+libraries = ["fltk", "ssl", "crypto"]
 static-libraries = [
 	"libdatachannel/build/libdatachannel-static.a",
 	"libdatachannel/build/deps/libjuice/libjuice-static.a",
 	"libdatachannel/build/deps/libsrtp/libsrtp2.a",
 	"libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a",
 ]
-preludes = ["cd libdatachannel && cmake -B build -G \"Unix Makefiles\" -DUSE_GNUTLS=0 -DUSE_NICE=0 -DCMAKE_BUILD_TYPE=Release && cd build && $(MAKE) datachannel datachannel-static"]
+pkg-config-libraries = ["gstreamer-1.0", "gstreamer-app-1.0", "sdl2", "glew"]
+preludes = ["""\
+	cd libdatachannel && \
+	cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release && \
+	cd build && \
+	$(MAKE) datachannel datachannel-static \
+"""]
 clean-preludes = ["rm -rf libdatachannel/build"]
 
 [env.OS.Windows_NT.paths]
 library = ["libdatachannel/build"]
 
 [env.OS.Windows_NT.options]
-compilation-flags = "-Wall -Wno-unused-command-line-argument -std=c++17 -O3 -static-libgcc -static-libstdc++ -DSDL_MAIN_HANDLED `pkg-config --cflags --libs gstreamer-1.0 gstreamer-app-1.0 glew`"
-libraries = ["fltk", "SDL2", "opengl32", "gdi32", "datachannel", "ssl", "crypto", "ws2_32", "comctl32", "ole32", "uuid"]
+compilation-flags = "-Wall -std=c++17 -O3 -static-libgcc -static-libstdc++ -DSDL_MAIN_HANDLED"
+libraries = ["fltk", "opengl32", "gdi32", "datachannel", "ssl", "crypto", "ws2_32", "comctl32", "ole32", "uuid"]
 static-libraries = []
