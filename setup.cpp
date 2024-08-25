@@ -24,7 +24,7 @@ public:
 };
 
 SetupWindow::SetupWindow():
-    Fl_Window(400, 190, "Lux Desktop") {
+    Fl_Double_Window(400, 190, "Lux Desktop") {
     xclass("lux-desktop");
     size_range(300, 190, 0, 400);
     auto column = new Fl_Flex(10, 10, w() - 20, h() - 20, Fl_Flex::COLUMN);
@@ -77,6 +77,6 @@ void SetupWindow::complete() {
     password = password_input->value();
     bitrate = bitrate_spinner->value();
     client_side_mouse = client_side_mouse_check_button->value();
-    config_complete = true;
+    setup_complete = true;
     hide();
 }

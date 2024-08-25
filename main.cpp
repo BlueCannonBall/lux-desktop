@@ -5,15 +5,15 @@
 #include "video.hpp"
 #include <FL/Fl.H>
 #include <FL/fl_ask.H>
-#include <cinttypes>
 #include <condition_variable>
-#include <cstring>
 #include <gst/app/gstappsink.h>
 #include <gst/gst.h>
+#include <inttypes.h>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <rtc/rtc.hpp>
+#include <string.h>
 #include <string>
 
 using nlohmann::json;
@@ -41,6 +41,7 @@ struct VideoInfo {
 };
 
 int main(int argc, char* argv[]) {
+    Fl::visual(FL_DOUBLE | FL_INDEX);
     rtc::InitLogger(rtc::LogLevel::Warning);
     pn::init();
     gst_init(&argc, &argv);

@@ -3,7 +3,7 @@
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <array>
-#include <cassert>
+#include <assert.h>
 #include <gst/gstsample.h>
 #include <memory>
 #include <mutex>

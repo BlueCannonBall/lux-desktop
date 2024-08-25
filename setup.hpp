@@ -9,13 +9,13 @@
 #include <FL/Fl_Spinner.H>
 #include <string>
 
-class SetupWindow : public Fl_Window {
+class SetupWindow : public Fl_Double_Window {
 public:
     std::string address;
     std::string password;
     unsigned int bitrate;
     bool client_side_mouse;
-    bool config_complete = false;
+    bool setup_complete = false;
 
     SetupWindow();
     SetupWindow(const SetupWindow&) = delete;
@@ -27,7 +27,7 @@ public:
             Fl::wait();
         }
         Fl::check();
-        return config_complete;
+        return setup_complete;
     }
 
 protected:
