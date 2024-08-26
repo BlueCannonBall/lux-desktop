@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<rtc::Description> answer;
         try {
             json answer_json = json::parse(resp.body_string());
-            auto sdp_data = pw::base64_decode(answer_json["Offer"]);
+            auto sdp_data = pw::base64_decode(answer_json["Offer"].get<std::string>());
             answer_json = json::parse(sdp_data);
             answer = std::make_unique<rtc::Description>(answer_json["sdp"].get<std::string>(), answer_json["type"].get<std::string>());
         } catch (const std::exception& e) {
