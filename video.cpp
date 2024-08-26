@@ -1,7 +1,6 @@
 #include "video.hpp"
 #include "json.hpp"
 #include "keys.hpp"
-#include <iostream>
 
 using nlohmann::json;
 
@@ -219,6 +218,20 @@ void VideoWindow::run(std::mutex& sample_mutex, GstSample** sample, std::shared_
 
             case SDL_WINDOWEVENT:
                 switch (event.window.event) {
+                case SDL_WINDOWEVENT_FOCUS_LOST: {
+                    if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
+                        std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+                    }
+                    break;
+                }
+
+                case SDL_WINDOWEVENT_FOCUS_GAINED: {
+                    if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
+                        std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+                    }
+                    break;
+                }
+
                 case SDL_WINDOWEVENT_RESIZED: {
                     letterbox(x, y, width, height);
 
