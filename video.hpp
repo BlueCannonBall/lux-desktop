@@ -5,9 +5,11 @@
 #include <array>
 #include <assert.h>
 #include <gst/gstsample.h>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <rtc/datachannel.hpp>
+#include <stdlib.h>
 
 class VideoWindow {
 protected:
@@ -31,6 +33,9 @@ public:
 
         SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
         SDL_SetHint(SDL_HINT_ALLOW_ALT_TAB_WHILE_GRABBED, "0");
+        if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
+            std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+        }
 
         window = SDL_CreateWindow("Lux Desktop", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
         SDL_SetRelativeMouseMode(client_side_mouse ? SDL_FALSE : SDL_TRUE);
@@ -46,6 +51,9 @@ public:
     ~VideoWindow() {
         SDL_GL_DeleteContext(gl_context);
         SDL_DestroyWindow(window);
+        if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
+            std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+        }
         SDL_QuitSubSystem(SDL_INIT_VIDEO);
     }
 
