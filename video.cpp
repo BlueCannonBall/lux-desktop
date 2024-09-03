@@ -207,12 +207,12 @@ void VideoWindow::run(std::mutex& sample_mutex, GstSample** sample, std::shared_
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 4, (GLvoid*) (sizeof(GLfloat) * 2));
     glEnableVertexAttribArray(1);
 
-    glClearColor(0, 0, 0, 1.f);
+    glClearColor(0.f, 0.f, 0.f, 1.f);
 
     auto prev_time = std::chrono::steady_clock::now();
     for (bool running = true; running; SDL_GL_SwapWindow(window)) {
         auto new_time = std::chrono::steady_clock::now();
-        std::cout << "Frame time: " << std::chrono::duration_cast<std::chrono::microseconds>(new_time - prev_time).count() << " microseconds" << std::endl;
+        std::cout << "Frame time: " << std::chrono::duration_cast<std::chrono::microseconds>(new_time - prev_time).count() << " microseconds    " << std::endl;
         prev_time = new_time;
 
         SDL_Event event;
