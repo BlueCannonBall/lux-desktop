@@ -187,7 +187,6 @@ int main(int argc, char* argv[]) {
                     GstStructure* caps_struct = gst_caps_get_structure(caps, 0);
                     gst_structure_get_int(caps_struct, "width", &video_info->width);
                     gst_structure_get_int(caps_struct, "height", &video_info->height);
-                    // video_info->sample.resize(video_info->width * video_info->height * 3);
                     video_info->cv.notify_one();
 
                     gst_caps_unref(caps);

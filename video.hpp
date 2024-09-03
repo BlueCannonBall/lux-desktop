@@ -42,6 +42,7 @@ public:
         SDL_SetWindowKeyboardGrab(window, SDL_TRUE);
 
         gl_context = SDL_GL_CreateContext(window);
+        SDL_GL_SetSwapInterval(1);
         glewExperimental = GL_TRUE;
         glewInit();
     }
