@@ -2,6 +2,7 @@
 #include "json.hpp"
 #include "keys.hpp"
 #include <chrono>
+#include <thread>
 
 using nlohmann::json;
 
@@ -212,7 +213,9 @@ void VideoWindow::run(std::mutex& sample_mutex, GstSample** sample, std::shared_
     auto prev_time = std::chrono::steady_clock::now();
     for (bool running = true; running; SDL_GL_SwapWindow(window)) {
         auto new_time = std::chrono::steady_clock::now();
-        std::cout << "Frame time: " << std::chrono::duration_cast<std::chrono::microseconds>(new_time - prev_time).count() << " microseconds    " << std::endl;
+        if (new_time - prev_time < std::chrono::milliseconds(1)) {
+            std::this_thread::sleep_until(prev_time + std::chrono::nanoseconds(1000000000 / 60));
+        }
         prev_time = new_time;
 
         SDL_Event event;
