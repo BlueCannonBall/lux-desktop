@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Sending offer: " << req_body_json << std::endl;
 
         pw::HTTPResponse resp;
-        if (pw::fetch("POST", "http://" + setup_window.address + "/offer", resp, req_body_json.dump(), {{"Content-Type", "application/json"}}) == PN_ERROR) {
+        if (pw::fetch("POST", "https://" + setup_window.address + "/offer", resp, req_body_json.dump(), {{"Content-Type", "application/json"}}) == PN_ERROR) {
             fl_alert("Failed to connect: %s", pw::universal_strerror().c_str());
             continue;
         } else if (resp.status_code != 200) {
