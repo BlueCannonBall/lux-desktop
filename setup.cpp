@@ -50,8 +50,8 @@ SetupWindow::SetupWindow():
         auto label = new Label(0, 0, "Bitrate:");
         bitrate_spinner = new Fl_Spinner(0, 0, 0, 0, "");
         bitrate_spinner->type(FL_INT_INPUT);
-        bitrate_spinner->minimum(250);
-        bitrate_spinner->maximum(10000);
+        bitrate_spinner->minimum(2000);
+        bitrate_spinner->maximum(7000);
         bitrate_spinner->value(4000);
         row->setSize(label, label->w());
         row->setSize(bitrate_spinner, 80);
