@@ -12,6 +12,7 @@
 #include <gst/gst.h>
 #include <inttypes.h>
 #include <iostream>
+#include <math.h>
 #include <memory>
 #include <mutex>
 #include <rtc/rtc.hpp>
@@ -244,24 +245,25 @@ int main(int argc, char* argv[]) {
     video_info.cv.wait(lock);
     lock.unlock();
 
-    std::thread([bitrate, conn, track]() {
+    std::thread([bitrate, conn, unordered_channel, track]() {
         size_t cursor = 0;
         std::vector<float> rtts;
         for (; conn->iceState() != rtc::PeerConnection::IceState::Disconnected &&
                conn->iceState() != rtc::PeerConnection::IceState::Failed;
-             std::this_thread::sleep_for(std::chrono::milliseconds(50))) {
+             std::this_thread::sleep_for(std::chrono::milliseconds(100))) {
+            unordered_channel->send("{\"type\":\"ping\"}");
+
             auto rtt_optional = conn->rtt();
             if (rtt_optional.has_value()) {
                 float rtt = rtt_optional.value().count();
-                if (rtts.size() < 120) {
+                if (rtts.size() < 75) {
                     rtts.push_back(rtt);
                 } else {
                     rtts[cursor++] = rtt;
-                    if (cursor >= 120) cursor = 0;
-
-                    float average_rtt = std::reduce(rtts.begin(), rtts.end()) / 120.f;
-                    track->requestBitrate(bitrate * (average_rtt / rtt) * 1000);
+                    if (cursor >= 75) cursor = 0;
                 }
+                float average_rtt = std::reduce(rtts.begin(), rtts.end()) / rtts.size();
+                track->requestBitrate(bitrate * sqrtf(average_rtt / rtt) * 1000);
             }
         }
     }).detach();
