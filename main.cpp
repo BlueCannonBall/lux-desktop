@@ -5,16 +5,20 @@
 #include "video.hpp"
 #include <FL/Fl.H>
 #include <FL/fl_ask.H>
+#include <algorithm>
+#include <chrono>
 #include <condition_variable>
 #include <gst/app/gstappsink.h>
 #include <gst/gst.h>
 #include <inttypes.h>
 #include <iostream>
+#include <math.h>
 #include <memory>
 #include <mutex>
 #include <rtc/rtc.hpp>
 #include <string.h>
 #include <string>
+#include <thread>
 
 using nlohmann::json;
 
@@ -46,6 +50,7 @@ int main(int argc, char* argv[]) {
     pn::init();
     gst_init(&argc, &argv);
 
+    float bitrate;
     bool client_side_mouse;
 
     std::shared_ptr<rtc::PeerConnection> conn;
@@ -65,6 +70,7 @@ int main(int argc, char* argv[]) {
         if (!setup_window.run()) {
             return 0;
         }
+        bitrate = setup_window.bitrate;
         client_side_mouse = setup_window.client_side_mouse;
 
         rtc::Configuration config;
@@ -86,7 +92,7 @@ int main(int argc, char* argv[]) {
                 },
             });
 
-        conn->onStateChange([track, bitrate = setup_window.bitrate](rtc::PeerConnection::State state) {
+        conn->onStateChange([track, bitrate](rtc::PeerConnection::State state) {
             std::cout << "State: " << state << std::endl;
             if (state == rtc::PeerConnection::State::Connected) {
                 track->requestBitrate(bitrate * 1000);
@@ -238,6 +244,28 @@ int main(int argc, char* argv[]) {
     std::unique_lock<std::mutex> lock(video_info.mutex);
     video_info.cv.wait(lock);
     lock.unlock();
+
+    std::thread([bitrate, conn, track]() {
+        size_t cursor = 0;
+        std::vector<float> rtts;
+        for (; conn->iceState() != rtc::PeerConnection::IceState::Disconnected &&
+               conn->iceState() != rtc::PeerConnection::IceState::Failed;
+             std::this_thread::sleep_for(std::chrono::milliseconds(50))) {
+            auto rtt_optional = conn->rtt();
+            if (rtt_optional.has_value()) {
+                float rtt = rtt_optional.value().count();
+                if (rtts.size() < 120) {
+                    rtts.push_back(rtt);
+                } else {
+                    rtts[cursor++] = rtt;
+                    if (cursor >= 120) cursor = 0;
+
+                    float average_rtt = std::reduce(rtts.begin(), rtts.end()) / 120.f;
+                    track->requestBitrate(bitrate * powf(average_rtt / rtt, 2) * 1000);
+                }
+            }
+        }
+    }).detach();
 
     VideoWindow video_window(video_info.width, video_info.height, client_side_mouse);
     video_window.run(video_info.mutex, &video_info.sample, ordered_channel, unordered_channel);
