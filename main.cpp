@@ -250,17 +250,17 @@ int main(int argc, char* argv[]) {
         std::vector<float> rtts;
         for (; conn->iceState() != rtc::PeerConnection::IceState::Disconnected &&
                conn->iceState() != rtc::PeerConnection::IceState::Failed;
-             std::this_thread::sleep_for(std::chrono::milliseconds(100))) {
+             std::this_thread::sleep_for(std::chrono::milliseconds(250))) {
             unordered_channel->send("{\"type\":\"ping\"}");
 
             auto rtt_optional = conn->rtt();
             if (rtt_optional.has_value()) {
                 float rtt = rtt_optional.value().count();
-                if (rtts.size() < 75) {
+                if (rtts.size() < 30) {
                     rtts.push_back(rtt);
                 } else {
                     rtts[cursor++] = rtt;
-                    if (cursor >= 75) cursor = 0;
+                    if (cursor >= 30) cursor = 0;
                 }
                 float average_rtt = std::reduce(rtts.begin(), rtts.end()) / rtts.size();
                 track->requestBitrate(bitrate * sqrtf(average_rtt / rtt) * 1000);
