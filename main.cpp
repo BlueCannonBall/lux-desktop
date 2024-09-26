@@ -12,7 +12,6 @@
 #include <gst/gst.h>
 #include <inttypes.h>
 #include <iostream>
-#include <math.h>
 #include <memory>
 #include <mutex>
 #include <rtc/rtc.hpp>
@@ -261,7 +260,7 @@ int main(int argc, char* argv[]) {
                     if (cursor >= 120) cursor = 0;
 
                     float average_rtt = std::reduce(rtts.begin(), rtts.end()) / 120.f;
-                    track->requestBitrate(bitrate * powf(average_rtt / rtt, 2) * 1000);
+                    track->requestBitrate(bitrate * (average_rtt / rtt) * 1000);
                 }
             }
         }
