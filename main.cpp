@@ -251,7 +251,9 @@ int main(int argc, char* argv[]) {
         for (; conn->iceState() != rtc::PeerConnection::IceState::Disconnected &&
                conn->iceState() != rtc::PeerConnection::IceState::Failed;
              std::this_thread::sleep_for(std::chrono::milliseconds(250))) {
-            unordered_channel->send("{\"type\":\"ping\"}");
+            if (unordered_channel->isOpen()) {
+                unordered_channel->send("{\"type\":\"ping\"}");
+            }
 
             auto rtt_optional = conn->rtt();
             if (rtt_optional.has_value()) {
