@@ -33,7 +33,7 @@ public:
             ret = last_optimistic_bitrate + 200;
         } else {
             last_empirical_bitrate = ret;
-            ret = std::max(last_optimistic_bitrate - (last_optimistic_bitrate - 2000) / 3, ret);
+            ret = std::max(last_optimistic_bitrate - std::max((last_optimistic_bitrate - 2000) / 3, 200), ret);
         }
         ret = std::min(std::max(ret, 2000), 7000);
         last_optimistic_bitrate = ret;
