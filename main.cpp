@@ -1,11 +1,11 @@
 #include "Polyweb/polyweb.hpp"
+#include "bandwidth.hpp"
 #include "glib.hpp"
 #include "json.hpp"
 #include "setup.hpp"
 #include "video.hpp"
 #include <FL/Fl.H>
 #include <FL/fl_ask.H>
-#include <algorithm>
 #include <chrono>
 #include <condition_variable>
 #include <gst/app/gstappsink.h>
@@ -50,13 +50,13 @@ int main(int argc, char* argv[]) {
     pn::init();
     gst_init(&argc, &argv);
 
-    float bitrate;
     bool client_side_mouse;
 
     std::shared_ptr<rtc::PeerConnection> conn;
     std::shared_ptr<rtc::Track> track;
     std::shared_ptr<rtc::DataChannel> ordered_channel;
     std::shared_ptr<rtc::DataChannel> unordered_channel;
+    std::shared_ptr<BandwidthEstimator> bandwidth_estimator;
 
     glib::Object<GstElement> pipeline;
     VideoInfo video_info;
@@ -70,7 +70,6 @@ int main(int argc, char* argv[]) {
         if (!setup_window.run()) {
             return 0;
         }
-        bitrate = setup_window.bitrate;
         client_side_mouse = setup_window.client_side_mouse;
 
         rtc::Configuration config;
@@ -92,11 +91,10 @@ int main(int argc, char* argv[]) {
                 },
             });
 
-        conn->onStateChange([track, bitrate](rtc::PeerConnection::State state) {
+        bandwidth_estimator = std::make_shared<BandwidthEstimator>(setup_window.bitrate);
+
+        conn->onStateChange([](rtc::PeerConnection::State state) {
             std::cout << "State: " << state << std::endl;
-            if (state == rtc::PeerConnection::State::Connected) {
-                track->requestBitrate(bitrate * 1000);
-            }
         });
 
         std::mutex gathering_mutex;
@@ -159,7 +157,12 @@ int main(int argc, char* argv[]) {
             g_object_set(appsrc, "caps", caps, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, nullptr);
             gst_caps_unref(caps);
         }
-        track->onMessage([appsrc](rtc::binary message) {
+        track->onMessage([appsrc, bandwidth_estimator](rtc::binary message) {
+            // Bandwidth estimation
+            rtc::RtpHeader rtp_header;
+            memcpy(&rtp_header, message.data(), sizeof rtp_header);
+            bandwidth_estimator->update(message.size(), rtp_header.seqNumber());
+
             if (appsrc) {
                 GstBuffer* buf = gst_buffer_new_and_alloc(message.size());
 
@@ -245,28 +248,12 @@ int main(int argc, char* argv[]) {
     video_info.cv.wait(lock);
     lock.unlock();
 
-    std::thread([bitrate, conn, unordered_channel, track]() {
-        size_t cursor = 0;
-        std::vector<float> rtts;
+    std::thread([conn, unordered_channel, track, bandwidth_estimator]() {
         for (; conn->iceState() != rtc::PeerConnection::IceState::Disconnected &&
                conn->iceState() != rtc::PeerConnection::IceState::Failed;
-             std::this_thread::sleep_for(std::chrono::milliseconds(250))) {
-            if (unordered_channel->isOpen()) {
-                unordered_channel->send("{\"type\":\"ping\"}");
-            }
-
-            auto rtt_optional = conn->rtt();
-            if (rtt_optional.has_value()) {
-                float rtt = rtt_optional.value().count();
-                if (rtts.size() < 30) {
-                    rtts.push_back(rtt);
-                } else {
-                    rtts[cursor++] = rtt;
-                    if (cursor >= 30) cursor = 0;
-                }
-                float average_rtt = std::reduce(rtts.begin(), rtts.end()) / rtts.size();
-                track->requestBitrate(bitrate * sqrtf(average_rtt / rtt) * 1000);
-            }
+             std::this_thread::sleep_for(std::chrono::milliseconds(300))) {
+            int rate = bandwidth_estimator->estimate(0.3);
+            track->requestBitrate(rate * 1000);
         }
     }).detach();
 
