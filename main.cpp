@@ -160,9 +160,11 @@ int main(int argc, char* argv[]) {
         }
         track->onMessage([appsrc, bandwidth_estimator](rtc::binary message) {
             // Bandwidth estimation
-            rtc::RtpHeader rtp_header;
-            memcpy(&rtp_header, message.data(), sizeof rtp_header);
-            bandwidth_estimator->update(message.size(), rtp_header.seqNumber());
+            if (message.size() >= sizeof(rtc::RtpHeader)) {
+                rtc::RtpHeader rtp_header;
+                memcpy(&rtp_header, message.data(), sizeof rtp_header);
+                bandwidth_estimator->update(message.size(), rtp_header.seqNumber());
+            }
 
             if (appsrc) {
                 GstBuffer* buf = gst_buffer_new_and_alloc(message.size());
