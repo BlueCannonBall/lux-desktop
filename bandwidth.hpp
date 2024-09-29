@@ -28,9 +28,9 @@ public:
     // Given the interval since last call (in seconds), returns a new bitrate value
     int estimate(double interval) {
         int ret = data_received * 8 / interval / 1000.;
-        if (!packets_lost && last_empirical_bitrate - ret < 200) {
+        if (!packets_lost && last_empirical_bitrate - ret < 250) {
             last_empirical_bitrate = ret;
-            ret = last_optimistic_bitrate + 100;
+            ret = last_optimistic_bitrate + 200;
         } else {
             last_empirical_bitrate = ret;
             ret = std::max(last_optimistic_bitrate - (last_optimistic_bitrate - 2000) / 3, ret);
