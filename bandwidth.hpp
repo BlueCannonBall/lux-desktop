@@ -30,10 +30,10 @@ public:
         int ret = data_received * 8 / interval / 1000.;
         if (!packets_lost && last_empirical_bitrate - ret <= 200) {
             last_empirical_bitrate = ret;
-            ret = last_optimistic_bitrate + 150;
+            ret = last_optimistic_bitrate + 150 * (interval / 0.3);
         } else {
             last_empirical_bitrate = ret;
-            ret = std::max(last_optimistic_bitrate - std::max((last_optimistic_bitrate - 2000) / 3, 150), ret);
+            ret = std::max<int>(last_optimistic_bitrate - std::max((last_optimistic_bitrate - 2000) / 3, 150) * (interval / 0.3), ret);
         }
         ret = std::min(std::max(ret, 2000), 7000);
         last_optimistic_bitrate = ret;
