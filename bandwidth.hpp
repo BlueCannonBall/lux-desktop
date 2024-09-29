@@ -28,7 +28,7 @@ public:
     // Given the interval since last call (in seconds), returns a new bitrate value
     int estimate(double interval) {
         int ret = data_received * 8 / interval / 1000.;
-        if (!packets_lost && last_empirical_bitrate - ret < 250) {
+        if (!packets_lost && last_empirical_bitrate - ret <= 200) {
             last_empirical_bitrate = ret;
             ret = last_optimistic_bitrate + 150;
         } else {
