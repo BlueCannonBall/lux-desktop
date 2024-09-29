@@ -48,6 +48,7 @@ int main(int argc, char* argv[]) {
     Fl::visual(FL_DOUBLE | FL_INDEX);
     rtc::InitLogger(rtc::LogLevel::Warning);
     pn::init();
+    pw::threadpool.resize(0); // The Polyweb threadpool is only used by Polyweb in server applications
     gst_init(&argc, &argv);
 
     bool client_side_mouse;
