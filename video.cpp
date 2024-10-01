@@ -369,7 +369,7 @@ void VideoWindow::run(std::mutex& sample_mutex, GstSample** sample, std::shared_
                 if (unordered_channel->isOpen()) {
                     json message = {
                         {"type", "wheel"},
-                        {"x", event.wheel.x * -120},
+                        {"x", event.wheel.x * 120},
                         {"y", event.wheel.y * -120},
                     };
                     unordered_channel->send(message.dump());
