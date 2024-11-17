@@ -31,7 +31,7 @@ SetupWindow::SetupWindow():
 
     {
         auto row = new Fl_Flex(Fl_Flex::ROW);
-        auto label = new Label(0, 0, "IP Address:");
+        auto label = new Label(0, 0, "Address:");
         address_input = new Fl_Input(0, 0, 0, 0, "");
         row->setSize(label, label->w());
         row->end();
