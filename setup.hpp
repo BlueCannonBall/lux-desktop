@@ -7,6 +7,7 @@
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Secret_Input.H>
 #include <FL/Fl_Spinner.H>
+#include <filesystem>
 #include <string>
 
 class SetupWindow : public Fl_Double_Window {
@@ -29,6 +30,8 @@ public:
         Fl::check();
         return setup_complete;
     }
+
+    static std::filesystem::path get_config_path();
 
 protected:
     Fl_Input* address_input;

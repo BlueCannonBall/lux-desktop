@@ -1,5 +1,11 @@
 #include "setup.hpp"
+#include "json.hpp"
 #include <FL/Fl_Box.H>
+#include <fstream>
+#include <iostream>
+#include <stdlib.h>
+
+using nlohmann::json;
 
 class Label : public Fl_Box {
 public:
@@ -22,6 +28,20 @@ public:
         Fl_Box::resize(x, y, std::max(w, label_w), std::max(h, label_h));
     }
 };
+
+std::filesystem::path SetupWindow::get_config_path() {
+    std::string ret;
+#ifdef _WIN32
+    if (char* appdata = getenv("APPDATA")) {
+        ret = std::string(appdata) + "\\lux-desktop";
+    }
+#else
+    if (char* home = getenv("HOME")) {
+        ret = std::string(home) + "/.config/lux-desktop";
+    }
+#endif
+    return ret;
+}
 
 SetupWindow::SetupWindow():
     Fl_Double_Window(400, 190, "Lux Desktop") {
@@ -70,6 +90,30 @@ SetupWindow::SetupWindow():
     resizable(column);
     column->end();
     end();
+
+    auto config_path = get_config_path();
+    if (!config_path.empty()) {
+        if (!std::filesystem::exists(config_path)) {
+            std::filesystem::create_directory(config_path);
+        }
+
+        std::ifstream config_file(config_path / "config.json");
+        if (config_file.is_open()) {
+            json config_json = json::parse(config_file);
+
+            json::const_iterator address_it;
+            if ((address_it = config_json.find("address")) != config_json.end() && address_it->is_string()) {
+                address_input->value(address_it->get<std::string>().c_str());
+            }
+
+            json::const_iterator password_it;
+            if ((password_it = config_json.find("password")) != config_json.end() && password_it->is_string()) {
+                password_input->value(password_it->get<std::string>().c_str());
+            }
+        } else {
+            std::cerr << "Error: Could not open config file" << std::endl;
+        }
+    }
 }
 
 void SetupWindow::complete() {
@@ -79,4 +123,22 @@ void SetupWindow::complete() {
     client_side_mouse = client_side_mouse_check_button->value();
     setup_complete = true;
     hide();
+
+    auto config_path = get_config_path();
+    if (!config_path.empty()) {
+        if (!std::filesystem::exists(config_path)) {
+            std::filesystem::create_directory(config_path);
+        }
+
+        std::ofstream config_file(config_path / "config.json");
+        if (config_file.is_open()) {
+            json config_json = {
+                {"address", address},
+                {"password", password},
+            };
+            config_file << config_json;
+        } else {
+            std::cerr << "Error: Could not open config file" << std::endl;
+        }
+    }
 }
