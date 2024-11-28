@@ -219,7 +219,8 @@ int main(int argc, char* argv[]) {
     lock.unlock();
 
     std::thread([conn, unordered_channel, track, &bandwidth_estimator]() {
-        while (conn->iceState() != rtc::PeerConnection::IceState::Disconnected &&
+        while (conn->iceState() != rtc::PeerConnection::IceState::Closed &&
+               conn->iceState() != rtc::PeerConnection::IceState::Disconnected &&
                conn->iceState() != rtc::PeerConnection::IceState::Failed) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
             track->requestBitrate(bandwidth_estimator.estimate(0.5) * 1000);

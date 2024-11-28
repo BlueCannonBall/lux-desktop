@@ -214,7 +214,8 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
     glClearColor(0.f, 0.f, 0.f, 1.f);
 
     for (bool running = true; running; SDL_GL_SwapWindow(window)) {
-        if (conn->iceState() == rtc::PeerConnection::IceState::Disconnected ||
+        if (conn->iceState() == rtc::PeerConnection::IceState::Closed ||
+            conn->iceState() == rtc::PeerConnection::IceState::Disconnected ||
             conn->iceState() == rtc::PeerConnection::IceState::Failed) {
             fl_alert("The connection has closed.");
             break;
