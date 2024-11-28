@@ -215,7 +215,6 @@ int main(int argc, char* argv[]) {
 
     std::unique_lock<std::mutex> lock(video.mutex);
     video.cv.wait(lock);
-    video.resized = false;
     lock.unlock();
 
     std::thread([conn, unordered_channel, track, &bandwidth_estimator]() {

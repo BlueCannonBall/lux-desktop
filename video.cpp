@@ -139,10 +139,6 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    video.mutex.lock();
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, video.width, video.height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-    video.mutex.unlock();
-
     int x;
     int y;
     int width;
