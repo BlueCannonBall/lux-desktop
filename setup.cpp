@@ -44,9 +44,9 @@ std::filesystem::path SetupWindow::get_config_path() {
 }
 
 SetupWindow::SetupWindow():
-    Fl_Double_Window(400, 190, "Lux Desktop") {
+    Fl_Window(400, 220, "Lux Desktop") {
     xclass("lux-desktop");
-    size_range(300, 190, 0, 400);
+    size_range(300, 220, 0, 400);
     auto column = new Fl_Flex(10, 10, w() - 20, h() - 20, Fl_Flex::COLUMN);
 
     {
@@ -79,6 +79,9 @@ SetupWindow::SetupWindow():
     }
 
     client_side_mouse_check_button = new Fl_Check_Button(0, 0, 0, 0, "Client-side mouse");
+    
+    verify_certs_check_button = new Fl_Check_Button(0, 0, 0, 0, "Verify certificates");
+    verify_certs_check_button->value(true);
 
     login_button = new Fl_Button(0, 0, 0, 0, "Login@>");
     login_button->callback([](Fl_Widget* widget, void* data) {
@@ -121,6 +124,7 @@ void SetupWindow::complete() {
     password = password_input->value();
     bitrate = bitrate_spinner->value();
     client_side_mouse = client_side_mouse_check_button->value();
+    verify_certs = verify_certs_check_button->value();
     setup_complete = true;
     hide();
 

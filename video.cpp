@@ -1,8 +1,7 @@
 #include "video.hpp"
 #include "json.hpp"
 #include "keys.hpp"
-#include <chrono>
-#include <thread>
+#include <FL/fl_ask.H>
 
 using nlohmann::json;
 
@@ -28,20 +27,22 @@ const GLchar* fragment_src =
     "}\n";
 
 void VideoWindow::letterbox(int& x, int& y, int& width, int& height) const {
+    std::lock_guard<std::mutex> lock(video.mutex);
+
     int window_width;
     int window_height;
     SDL_GetWindowSize(window, &window_width, &window_height);
 
-    float video_aspect_ratio = (float) video_width / video_height;
+    float video_aspect_ratio = (float) video.width / video.height;
     float window_aspect_ratio = (float) window_width / window_height;
     if (video_aspect_ratio > window_aspect_ratio) {
         x = 0;
         width = window_width;
-        height = ((float) window_width / video_width) * video_height;
+        height = ((float) window_width / video.width) * video.height;
         y = (window_height - height) / 2;
     } else if (video_aspect_ratio < window_aspect_ratio) {
         y = 0;
-        width = ((float) window_height / video_height) * video_width;
+        width = ((float) window_height / video.height) * video.width;
         height = window_height;
         x = (window_width - width) / 2;
     } else {
@@ -88,21 +89,23 @@ void VideoWindow::window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) 
     int window_height;
     SDL_GetWindowSize(window, &window_width, &window_height);
 
-    float video_aspect_ratio = (float) video_width / video_height;
+    std::lock_guard<std::mutex> lock(video.mutex);
+
+    float video_aspect_ratio = (float) video.width / video.height;
     float window_aspect_ratio = (float) window_width / window_height;
     if (video_aspect_ratio > window_aspect_ratio) {
-        x_ret = x / ((float) window_width / video_width);
-        y_ret = (y - ((1.f - window_aspect_ratio / video_aspect_ratio) * window_height / 2.f)) / ((float) window_width / video_width);
+        x_ret = x / ((float) window_width / video.width);
+        y_ret = (y - ((1.f - window_aspect_ratio / video_aspect_ratio) * window_height / 2.f)) / ((float) window_width / video.width);
     } else if (video_aspect_ratio < window_aspect_ratio) {
-        x_ret = (x - ((1.f - video_aspect_ratio / window_aspect_ratio) * window_width / 2.f)) / ((float) window_height / video_height);
-        y_ret = y / ((float) window_height / video_height);
+        x_ret = (x - ((1.f - video_aspect_ratio / window_aspect_ratio) * window_width / 2.f)) / ((float) window_height / video.height);
+        y_ret = y / ((float) window_height / video.height);
     } else {
-        x_ret = x / ((float) window_width / video_width);
-        y_ret = y / ((float) window_height / video_height);
+        x_ret = x / ((float) window_width / video.width);
+        y_ret = y / ((float) window_height / video.height);
     }
 }
 
-void VideoWindow::run(std::mutex& sample_mutex, GstSample** sample, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
+void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
     SDL_GL_MakeCurrent(window, gl_context);
 
     const GLubyte* vendor = glGetString(GL_VENDOR);
@@ -136,7 +139,9 @@ void VideoWindow::run(std::mutex& sample_mutex, GstSample** sample, std::shared_
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, video_width, video_height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    video.mutex.lock();
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, video.width, video.height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    video.mutex.unlock();
 
     int x;
     int y;
@@ -200,30 +205,26 @@ void VideoWindow::run(std::mutex& sample_mutex, GstSample** sample, std::shared_
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    // Position attribute
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 4, nullptr);
     glEnableVertexAttribArray(0);
 
-    // TexCoord attribute
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 4, (GLvoid*) (sizeof(GLfloat) * 2));
     glEnableVertexAttribArray(1);
 
     glClearColor(0.f, 0.f, 0.f, 1.f);
 
-    auto prev_time = std::chrono::steady_clock::now();
     for (bool running = true; running; SDL_GL_SwapWindow(window)) {
-        auto new_time = std::chrono::steady_clock::now();
-        if (new_time - prev_time < std::chrono::milliseconds(1)) {
-            std::this_thread::sleep_until(prev_time + std::chrono::nanoseconds(1000000000 / 60));
+        if (conn->iceState() == rtc::PeerConnection::IceState::Disconnected ||
+            conn->iceState() == rtc::PeerConnection::IceState::Failed) {
+            fl_alert("The connection has closed.");
+            break;
         }
-        prev_time = new_time;
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
             case SDL_QUIT:
-                running = false;
-                break;
+                goto cleanup;
 
             case SDL_WINDOWEVENT:
                 switch (event.window.event) {
@@ -300,7 +301,7 @@ void VideoWindow::run(std::mutex& sample_mutex, GstSample** sample, std::shared_
                     break;
                 }
 
-                if (event.key.keysym.sym == SDLK_F10) {
+                if (event.key.keysym.sym == SDLK_F9) {
                     if (!client_side_mouse) SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() ? SDL_FALSE : SDL_TRUE);
                     SDL_SetWindowKeyboardGrab(window, SDL_GetWindowKeyboardGrab(window) ? SDL_FALSE : SDL_TRUE);
                 } else if (event.key.keysym.sym == SDLK_F11) {
@@ -380,18 +381,24 @@ void VideoWindow::run(std::mutex& sample_mutex, GstSample** sample, std::shared_
 
         glClear(GL_COLOR_BUFFER_BIT);
 
-        sample_mutex.lock();
-        if (*sample) {
-            GstBuffer* buf = gst_sample_get_buffer(*sample);
+        video.mutex.lock();
+        if (video.sample) {
+            GstBuffer* buf = gst_sample_get_buffer(video.sample);
             GstMapInfo map;
             gst_buffer_map(buf, &map, GST_MAP_READ);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, video_width, video_height, GL_RGB, GL_UNSIGNED_BYTE, map.data);
+            if (video.resized) {
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, video.width, video.height, 0, GL_RGB, GL_UNSIGNED_BYTE, map.data);
+                video.resized = false;
+            } else {
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, video.width, video.height, GL_RGB, GL_UNSIGNED_BYTE, map.data);
+            }
             gst_buffer_unmap(buf, &map);
         }
-        sample_mutex.unlock();
+        video.mutex.unlock();
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
     }
 
+cleanup:
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ebo);

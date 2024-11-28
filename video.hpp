@@ -4,12 +4,36 @@
 #include <SDL2/SDL.h>
 #include <array>
 #include <assert.h>
+#include <condition_variable>
 #include <gst/gstsample.h>
 #include <iostream>
 #include <memory>
 #include <mutex>
-#include <rtc/datachannel.hpp>
+#include <rtc/rtc.hpp>
 #include <stdlib.h>
+
+struct Video {
+    std::mutex mutex;
+    std::condition_variable cv;
+    int width;
+    int height;
+    bool resized = false;
+    GstSample* sample = nullptr;
+
+    ~Video() {
+        if (sample) {
+            gst_sample_unref(sample);
+            sample = nullptr;
+        }
+    }
+
+    void set_sample(GstSample* sample) {
+        if (this->sample != sample) {
+            if (this->sample) gst_sample_unref(this->sample);
+            this->sample = sample;
+        }
+    }
+};
 
 class VideoWindow {
 protected:
@@ -17,13 +41,11 @@ protected:
     SDL_GLContext gl_context = nullptr;
 
 public:
-    const int video_width;
-    const int video_height;
+    Video& video;
     const bool client_side_mouse;
 
-    VideoWindow(int video_width, int video_height, bool client_side_mouse = false, int window_width = 960, int window_height = 540):
-        video_width(video_width),
-        video_height(video_height),
+    VideoWindow(Video& video, bool client_side_mouse = false, int window_width = 960, int window_height = 540):
+        video(video),
         client_side_mouse(client_side_mouse) {
         SDL_Init(SDL_INIT_VIDEO);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -61,5 +83,5 @@ public:
     void letterbox(int& x, int& y, int& width, int& height) const;
     std::array<GLfloat, 16> orthographic_matrix() const;
     void window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) const;
-    void run(std::mutex& sample_mutex, GstSample** sample, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel);
+    void run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel);
 };
