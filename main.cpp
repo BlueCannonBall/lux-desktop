@@ -28,6 +28,7 @@ int main(int argc, char* argv[]) {
 
     bool client_side_mouse;
     BandwidthEstimator bandwidth_estimator;
+    pw::ClientConfig client_config;
 
     std::shared_ptr<rtc::PeerConnection> conn;
     std::shared_ptr<rtc::Track> track;
@@ -48,6 +49,7 @@ int main(int argc, char* argv[]) {
         }
         client_side_mouse = setup_window.client_side_mouse;
         bandwidth_estimator = BandwidthEstimator(setup_window.bitrate);
+        client_config.verify_mode = setup_window.verify_certs ? SSL_VERIFY_PEER : SSL_VERIFY_NONE;
 
         rtc::Configuration config;
         config.iceServers.emplace_back("stun.l.google.com:19302");
@@ -69,14 +71,14 @@ int main(int argc, char* argv[]) {
             });
 
         {
-            Waiter gathering_waiter;
-            conn->onGatheringStateChange([&gathering_waiter](rtc::PeerConnection::GatheringState state) {
+            Waiter waiter;
+            conn->onGatheringStateChange([&waiter](rtc::PeerConnection::GatheringState state) {
                 if (state == rtc::PeerConnection::GatheringState::Complete) {
-                    gathering_waiter.notify_one();
+                    waiter.notify_one();
                 }
             });
             conn->setLocalDescription();
-            gathering_waiter.wait();
+            waiter.wait();
         }
 
         std::string offer;
@@ -89,16 +91,14 @@ int main(int argc, char* argv[]) {
             offer = offer_json.dump();
         }
 
-        json req_body_json = {
+        json req_json = {
             {"password", setup_window.password},
             {"show_mouse", !client_side_mouse},
             {"offer", pw::base64_encode(offer.data(), offer.size())},
         };
 
         pw::HTTPResponse resp;
-        if (pw::fetch("POST", "https://" + setup_window.address + "/offer", resp, req_body_json.dump(), {{"Content-Type", "application/json"}}, {
-                                                                                                                                                    .verify_mode = setup_window.verify_certs ? SSL_VERIFY_PEER : SSL_VERIFY_NONE,
-                                                                                                                                                }) == PN_ERROR) {
+        if (pw::fetch("POST", "https://" + setup_window.address + "/offer", resp, req_json.dump(), {{"Content-Type", "application/json"}}, client_config) == PN_ERROR) {
             fl_alert("Failed to connect: %s", pw::universal_strerror().c_str());
             continue;
         } else if (resp.status_code != 200) {
@@ -108,9 +108,8 @@ int main(int argc, char* argv[]) {
 
         std::unique_ptr<rtc::Description> answer;
         try {
-            json answer_json = json::parse(resp.body_string());
-            auto sdp_data = pw::base64_decode(answer_json["Offer"].get<std::string>());
-            answer_json = json::parse(sdp_data);
+            json resp_json = json::parse(resp.body_string());
+            json answer_json = json::parse(pw::base64_decode(resp_json["Offer"].get<std::string>()));
             answer = std::make_unique<rtc::Description>(answer_json["sdp"].get<std::string>(), answer_json["type"].get<std::string>());
         } catch (const std::exception& e) {
             fl_alert("Failed to start streaming: Failed to parse server answer: %s", e.what());
