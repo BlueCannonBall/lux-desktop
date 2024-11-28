@@ -185,9 +185,8 @@ int main(int argc, char* argv[]) {
         }
         glib::connect_signal(appsink, "new-sample", [&video](GstElement* appsink) {
             GstSample* sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink));
-            video.mutex.lock();
+            std::lock_guard<std::mutex> lock(video.mutex);
             video.set_sample(sample);
-            video.mutex.unlock();
             return GST_FLOW_OK;
         });
 
