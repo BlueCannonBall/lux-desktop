@@ -79,7 +79,7 @@ SetupWindow::SetupWindow():
     }
 
     client_side_mouse_check_button = new Fl_Check_Button(0, 0, 0, 0, "Client-side mouse");
-    
+
     verify_certs_check_button = new Fl_Check_Button(0, 0, 0, 0, "Verify certificates");
     verify_certs_check_button->value(true);
 
@@ -113,6 +113,11 @@ SetupWindow::SetupWindow():
             if ((password_it = config_json.find("password")) != config_json.end() && password_it->is_string()) {
                 password_input->value(password_it->get<std::string>().c_str());
             }
+
+            json::const_iterator verify_certs_it;
+            if ((verify_certs_it = config_json.find("verify_certs")) != config_json.end() && verify_certs_it->is_boolean()) {
+                verify_certs_check_button->value(verify_certs_it->get<bool>());
+            }
         } else {
             std::cerr << "Error: Could not open config file" << std::endl;
         }
@@ -139,6 +144,7 @@ void SetupWindow::complete() {
             json config_json = {
                 {"address", address},
                 {"password", password},
+                {"verify_certs", verify_certs},
             };
             config_file << config_json;
         } else {

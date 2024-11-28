@@ -20,6 +20,7 @@
 using nlohmann::json;
 
 int main(int argc, char* argv[]) {
+    Fl::scheme("gtk+");
     rtc::InitLogger(rtc::LogLevel::Warning);
     pn::init();
     pw::threadpool.resize(0); // The Polyweb threadpool is only used by Polyweb in server applications
