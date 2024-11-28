@@ -110,7 +110,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
 
     const GLubyte* vendor = glGetString(GL_VENDOR);
     const GLubyte* renderer = glGetString(GL_RENDERER);
-    std::cout << "Graphics hardware info: " << vendor << ' ' << renderer << std::endl;
+    std::cout << "Graphics hardware info: " << vendor << ", " << renderer << std::endl;
 
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertex_src, nullptr);
