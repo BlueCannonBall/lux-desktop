@@ -3,6 +3,7 @@
 #include "glib.hpp"
 #include "json.hpp"
 #include "setup.hpp"
+#include "theme.hpp"
 #include "video.hpp"
 #include "waiter.hpp"
 #include <FL/fl_ask.H>
@@ -20,7 +21,9 @@
 using nlohmann::json;
 
 int main(int argc, char* argv[]) {
-    Fl::scheme("gtk+");
+    use_greybird_scheme();
+    use_greybird_colors();
+    use_native_settings();
     rtc::InitLogger(rtc::LogLevel::Warning);
     pn::init();
     pw::threadpool.resize(0); // The Polyweb threadpool is only used by Polyweb in server applications
