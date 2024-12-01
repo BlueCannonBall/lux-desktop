@@ -149,6 +149,9 @@ int main(int argc, char* argv[]) {
 
         GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
 
+        GstElement* queue = gst_element_factory_make("queue", nullptr);
+        g_object_set(queue, "silent", TRUE, nullptr);
+
         GstElement* avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
         {
             glib::Object<GstPad> pad = gst_element_get_static_pad(avdec_h264, "src");
@@ -193,12 +196,14 @@ int main(int argc, char* argv[]) {
         gst_bin_add_many(GST_BIN(pipeline.get()),
             appsrc,
             rtph264depay,
+            queue,
             avdec_h264,
             videoconvert,
             appsink,
             nullptr);
         if (!gst_element_link_many(appsrc,
                 rtph264depay,
+                queue,
                 avdec_h264,
                 videoconvert,
                 appsink,
