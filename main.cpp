@@ -164,6 +164,7 @@ int main(int argc, char* argv[]) {
                     gst_structure_get_int(caps_struct, "width", &video->width);
                     gst_structure_get_int(caps_struct, "height", &video->height);
                     video->resized = true;
+                    video->set_sample(nullptr);
                     video->mutex.unlock();
                     video->cv.notify_one();
 
