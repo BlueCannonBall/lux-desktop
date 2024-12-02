@@ -40,6 +40,8 @@ protected:
     SDL_Window* window = nullptr;
     SDL_GLContext gl_context = nullptr;
 
+    void handle_resize(GLuint program, GLuint vbo);
+
 public:
     Video& video;
     const bool client_side_mouse;

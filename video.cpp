@@ -26,9 +26,45 @@ const GLchar* fragment_src =
     "    outColor = texture(tex, TexCoord);\n"
     "}\n";
 
-void VideoWindow::letterbox(int& x, int& y, int& width, int& height) const {
-    std::lock_guard<std::mutex> lock(video.mutex);
+void VideoWindow::handle_resize(GLuint program, GLuint vbo) {
+    int x;
+    int y;
+    int width;
+    int height;
+    letterbox(x, y, width, height);
 
+    GLuint loc = glGetUniformLocation(program, "user_pos");
+    glUniform2f(loc, x, y);
+
+    auto matrix = orthographic_matrix();
+    {
+        GLuint loc = glGetUniformLocation(program, "projection");
+        glUniformMatrix4fv(loc, 1, GL_FALSE, matrix.data());
+    }
+
+    std::array<GLfloat, 16> vertices = {
+        0.f,
+        0.f,
+        0.f,
+        0.f,
+        (GLfloat) width,
+        0.f,
+        1.f,
+        0.f,
+        (GLfloat) width,
+        (GLfloat) height,
+        1.f,
+        1.f,
+        0.f,
+        (GLfloat) height,
+        0.f,
+        1.f,
+    };
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), vertices.data(), GL_DYNAMIC_DRAW);
+}
+
+void VideoWindow::letterbox(int& x, int& y, int& width, int& height) const {
     int window_width;
     int window_height;
     SDL_GetWindowSize(window, &window_width, &window_height);
@@ -139,52 +175,21 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    int x;
-    int y;
-    int width;
-    int height;
-    letterbox(x, y, width, height);
-
-    {
-        GLuint loc = glGetUniformLocation(program, "user_pos");
-        glUniform2f(loc, x, y);
-    }
-
-    auto matrix = orthographic_matrix();
-    {
-        GLuint loc = glGetUniformLocation(program, "projection");
-        glUniformMatrix4fv(loc, 1, GL_FALSE, matrix.data());
-    }
-
     {
         GLuint loc = glGetUniformLocation(program, "tex");
         glUniform1i(loc, 0);
     }
 
     GLuint vao;
-    GLuint vbo;
     glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
     glBindVertexArray(vao);
 
-    std::array<GLfloat, 16> vertices = {
-        0.f,
-        0.f,
-        0.f,
-        0.f,
-        (GLfloat) width,
-        0.f,
-        1.f,
-        0.f,
-        (GLfloat) width,
-        (GLfloat) height,
-        1.f,
-        1.f,
-        0.f,
-        (GLfloat) height,
-        0.f,
-        1.f,
-    };
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+
+    video.mutex.lock();
+    handle_resize(program, vbo);
+    video.mutex.unlock();
 
     // clang-format off
     GLuint indices[] = {
@@ -192,9 +197,6 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
         0, 2, 3,
     };
     // clang-format on
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), vertices.data(), GL_DYNAMIC_DRAW);
 
     GLuint ebo;
     glGenBuffers(1, &ebo);
@@ -240,41 +242,10 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 }
 
                 case SDL_WINDOWEVENT_RESIZED: {
-                    letterbox(x, y, width, height);
-
-                    {
-                        GLuint loc = glGetUniformLocation(program, "user_pos");
-                        glUniform2f(loc, x, y);
-                    }
-
-                    matrix = orthographic_matrix();
-                    {
-                        GLuint loc = glGetUniformLocation(program, "projection");
-                        glUniformMatrix4fv(loc, 1, GL_FALSE, matrix.data());
-                    }
-
-                    vertices = {
-                        0.f,
-                        0.f,
-                        0.f,
-                        0.f,
-                        (GLfloat) width,
-                        0.f,
-                        1.f,
-                        0.f,
-                        (GLfloat) width,
-                        (GLfloat) height,
-                        1.f,
-                        1.f,
-                        0.f,
-                        (GLfloat) height,
-                        0.f,
-                        1.f,
-                    };
-                    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-                    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), vertices.data(), GL_DYNAMIC_DRAW);
+                    video.mutex.lock();
+                    handle_resize(program, vbo);
+                    video.mutex.unlock();
                     glViewport(0, 0, event.window.data1, event.window.data2);
-
                     break;
                 }
                 }
@@ -384,6 +355,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             GstMapInfo map;
             gst_buffer_map(buf, &map, GST_MAP_READ);
             if (video.resized) {
+                handle_resize(program, vbo);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, video.width, video.height, 0, GL_RGB, GL_UNSIGNED_BYTE, map.data);
                 video.resized = false;
             } else {
