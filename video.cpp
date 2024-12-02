@@ -315,6 +315,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 break;
 
             case SDL_MOUSEBUTTONDOWN:
+                if (!client_side_mouse) SDL_SetRelativeMouseMode(SDL_TRUE);
                 if (ordered_channel->isOpen()) {
                     json message = {
                         {"type", "mousedown"},
@@ -322,6 +323,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                     };
                     ordered_channel->send(message.dump());
                 }
+
                 break;
 
             case SDL_MOUSEBUTTONUP:
