@@ -1,4 +1,7 @@
-![Login Screenshot](login_screenshot.png) ![Screenshot](screenshot.png)
+<p float="left">
+  <img src="/login_screenshot.png" width="45%" />
+  <img src="/screenshot.png" width="45%" /> 
+</p>
 
 *An instance of Lux viewing a Kubuntu desktop.*
 
