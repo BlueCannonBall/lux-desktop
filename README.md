@@ -1,5 +1,4 @@
-![Login Screenshot](login_screenshot.png)
-![Screenshot](screenshot.png)
+![Login Screenshot](login_screenshot.png) ![Screenshot](screenshot.png)
 
 *An instance of Lux viewing a Kubuntu desktop.*
 
