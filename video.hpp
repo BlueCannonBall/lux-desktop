@@ -61,7 +61,7 @@ public:
             std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
         }
 
-        window = SDL_CreateWindow("Lux Desktop", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+        window = SDL_CreateWindow("Lux Client", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
         SDL_SetRelativeMouseMode(client_side_mouse ? SDL_FALSE : SDL_TRUE);
         SDL_SetWindowKeyboardGrab(window, SDL_TRUE);
 

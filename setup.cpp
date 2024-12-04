@@ -44,7 +44,7 @@ std::filesystem::path SetupWindow::get_config_path() {
 }
 
 SetupWindow::SetupWindow():
-    Fl_Window(400, 220, "Lux Desktop") {
+    Fl_Window(400, 220, "Lux Client") {
     xclass("lux-desktop");
     size_range(300, 220, 0, 400);
     auto column = new Fl_Flex(10, 10, w() - 20, h() - 20, Fl_Flex::COLUMN);
