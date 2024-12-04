@@ -1,6 +1,6 @@
 <p float="left">
-  <img src="/login_screenshot.png" width="45%" />
-  <img src="/screenshot.png" width="45%" /> 
+  <img src="/login_screenshot.png" width="50%" />
+  <img src="/screenshot.png" width="50%" /> 
 </p>
 
 *An instance of Lux viewing a Kubuntu desktop.*
