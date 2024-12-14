@@ -114,6 +114,11 @@ SetupWindow::SetupWindow():
                 password_input->value(password_it->get<std::string>().c_str());
             }
 
+            json::const_iterator client_side_mouse_it;
+            if ((client_side_mouse_it = config_json.find("client_side_mouse")) != config_json.end() && client_side_mouse_it->is_boolean()) {
+                client_side_mouse_check_button->value(client_side_mouse_it->get<bool>());
+            }
+
             json::const_iterator verify_certs_it;
             if ((verify_certs_it = config_json.find("verify_certs")) != config_json.end() && verify_certs_it->is_boolean()) {
                 verify_certs_check_button->value(verify_certs_it->get<bool>());
@@ -144,6 +149,7 @@ void SetupWindow::complete() {
             json config_json = {
                 {"address", address},
                 {"password", password},
+                {"client_side_mouse", client_side_mouse},
                 {"verify_certs", verify_certs},
             };
             config_file << config_json;
