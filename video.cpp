@@ -340,8 +340,8 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 if (unordered_channel->isOpen()) {
                     json message = {
                         {"type", "wheel"},
-                        {"x", event.wheel.x * 120},
-                        {"y", event.wheel.y * -120},
+                        {"x", event.wheel.preciseX * 120},
+                        {"y", event.wheel.preciseY * -120},
                     };
                     unordered_channel->send(message.dump());
                 }
