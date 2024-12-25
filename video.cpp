@@ -2,6 +2,7 @@
 #include "json.hpp"
 #include "keys.hpp"
 #include <FL/fl_ask.H>
+#include <math.h>
 
 using nlohmann::json;
 
@@ -340,8 +341,8 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 if (unordered_channel->isOpen()) {
                     json message = {
                         {"type", "wheel"},
-                        {"x", event.wheel.preciseX * 120},
-                        {"y", event.wheel.preciseY * -120},
+                        {"x", (int) roundf(event.wheel.preciseX * 120.f)},
+                        {"y", (int) roundf(event.wheel.preciseY * -120.f)},
                     };
                     unordered_channel->send(message.dump());
                 }
