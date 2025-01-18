@@ -278,9 +278,12 @@ int main(int argc, char* argv[]) {
         break;
     }
 
-    std::unique_lock<std::mutex> lock(video.mutex);
-    video.cv.wait(lock);
-    lock.unlock();
+    // Wait for video resolution to be available
+    {
+        std::unique_lock<std::mutex> lock(video.mutex);
+        video.cv.wait(lock);
+        lock.unlock();
+    }
 
     std::thread([conn, video_track, unordered_channel, &bandwidth_estimator]() {
         while (conn->iceState() != rtc::PeerConnection::IceState::Closed &&
