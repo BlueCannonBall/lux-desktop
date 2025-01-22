@@ -256,6 +256,10 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 if (!event.key.repeat &&
                     event.key.keysym.sym != SDLK_F10 &&
                     event.key.keysym.sym != SDLK_F11 &&
+                    event.key.keysym.sym != SDLK_BRIGHTNESSDOWN &&
+                    event.key.keysym.sym != SDLK_BRIGHTNESSUP &&
+                    event.key.keysym.sym != SDLK_VOLUMEDOWN &&
+                    event.key.keysym.sym != SDLK_VOLUMEUP &&
                     ordered_channel->isOpen()) {
                     json message = {
                         {"type", "keydown"},
@@ -280,7 +284,11 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                     } else {
                         SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
                     }
-                } else if (ordered_channel->isOpen()) {
+                } else if (event.key.keysym.sym != SDLK_BRIGHTNESSDOWN &&
+                           event.key.keysym.sym != SDLK_BRIGHTNESSUP &&
+                           event.key.keysym.sym != SDLK_VOLUMEDOWN &&
+                           event.key.keysym.sym != SDLK_VOLUMEUP &&
+                           ordered_channel->isOpen()) {
                     json message = {
                         {"type", "keyup"},
                         {"key", sdl_to_browser_key(event.key.keysym.sym)},
