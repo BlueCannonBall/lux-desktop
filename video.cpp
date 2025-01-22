@@ -254,7 +254,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
 
             case SDL_KEYDOWN:
                 if (!event.key.repeat &&
-                    event.key.keysym.sym != SDLK_F10 &&
+                    event.key.keysym.sym != SDLK_F9 &&
                     event.key.keysym.sym != SDLK_F11 &&
                     event.key.keysym.sym != SDLK_BRIGHTNESSDOWN &&
                     event.key.keysym.sym != SDLK_BRIGHTNESSUP &&
