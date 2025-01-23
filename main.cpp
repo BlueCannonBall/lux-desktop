@@ -248,6 +248,13 @@ int main(int argc, char* argv[]) {
 
             GstElement* rtpopusdepay = gst_element_factory_make("rtpopusdepay", nullptr);
 
+            GstElement* capsfilter = gst_element_factory_make("capsfilter", nullptr);
+            {
+                GstCaps* caps = gst_caps_new_simple("audio/x-opus", "channels", G_TYPE_INT, 2, nullptr);
+                g_object_set(capsfilter, "caps", caps, nullptr);
+                gst_caps_unref(caps);
+            }
+
             GstElement* opusdec = gst_element_factory_make("opusdec", nullptr);
 
             GstElement* audioconvert = gst_element_factory_make("audioconvert", nullptr);
@@ -257,12 +264,14 @@ int main(int argc, char* argv[]) {
             gst_bin_add_many(GST_BIN(audio_pipeline.get()),
                 appsrc,
                 rtpopusdepay,
+                capsfilter,
                 opusdec,
                 audioconvert,
                 autoaudiosink,
                 nullptr);
             if (!gst_element_link_many(appsrc,
                     rtpopusdepay,
+                    capsfilter,
                     opusdec,
                     audioconvert,
                     autoaudiosink,
