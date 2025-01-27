@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
                 if (message.size() >= sizeof(rtc::RtpHeader)) {
                     rtc::RtpHeader rtp_header;
                     memcpy(&rtp_header, message.data(), sizeof rtp_header);
-                    bandwidth_estimator.update(message.size(), rtp_header.seqNumber());
+                    bandwidth_estimator.update_video(message.size(), rtp_header.seqNumber());
                 }
 
                 if (appsrc) {
@@ -230,7 +230,13 @@ int main(int argc, char* argv[]) {
                 g_object_set(appsrc, "caps", caps, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, nullptr);
                 gst_caps_unref(caps);
             }
-            audio_track->onMessage([appsrc](rtc::binary message) {
+            audio_track->onMessage([appsrc, &bandwidth_estimator](rtc::binary message) {
+                if (message.size() >= sizeof(rtc::RtpHeader)) {
+                    rtc::RtpHeader rtp_header;
+                    memcpy(&rtp_header, message.data(), sizeof rtp_header);
+                    bandwidth_estimator.update_audio(message.size(), rtp_header.seqNumber());
+                }
+
                 if (appsrc) {
                     GstBuffer* buf = gst_buffer_new_and_alloc(message.size());
 

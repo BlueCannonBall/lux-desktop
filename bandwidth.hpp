@@ -8,7 +8,8 @@ class BandwidthEstimator {
 protected:
     size_t data_received = 0;
     uint16_t packets_lost = 0;
-    uint16_t last_seq_number = 0;
+    uint16_t last_video_seq_number = 0;
+    uint16_t last_audio_seq_number = 0;
     int last_empirical_bitrate;
     int last_optimistic_bitrate;
 
@@ -17,12 +18,20 @@ public:
         last_empirical_bitrate(starting_bitrate),
         last_optimistic_bitrate(starting_bitrate) {}
 
-    void update(size_t size, uint16_t seq_number) {
+    void update_video(size_t size, uint16_t seq_number) {
         data_received += size;
-        if (seq_number != last_seq_number + 1) {
+        if (seq_number != last_video_seq_number + 1) {
             ++packets_lost;
         }
-        last_seq_number = seq_number;
+        last_video_seq_number = seq_number;
+    }
+
+    void update_audio(size_t size, uint16_t seq_number) {
+        data_received += size;
+        if (seq_number != last_audio_seq_number + 1) {
+            ++packets_lost;
+        }
+        last_audio_seq_number = seq_number;
     }
 
     // Given the interval since last call (in seconds), returns a new bitrate value
