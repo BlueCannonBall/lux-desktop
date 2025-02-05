@@ -44,9 +44,9 @@ std::filesystem::path SetupWindow::get_config_path() {
 }
 
 SetupWindow::SetupWindow():
-    Fl_Window(400, 220, "Lux Client") {
+    Fl_Window(400, 270, "Lux Client") {
     xclass("lux-desktop");
-    size_range(300, 220, 0, 400);
+    size_range(350, 250, 0, 400);
     auto column = new Fl_Flex(10, 10, w() - 20, h() - 20, Fl_Flex::COLUMN);
 
     {
@@ -79,6 +79,8 @@ SetupWindow::SetupWindow():
     }
 
     client_side_mouse_check_button = new Fl_Check_Button(0, 0, 0, 0, "Client-side mouse");
+
+    view_only_check_button = new Fl_Check_Button(0, 0, 0, 0, "View only");
 
     verify_certs_check_button = new Fl_Check_Button(0, 0, 0, 0, "Verify certificates");
     verify_certs_check_button->value(true);
@@ -119,6 +121,11 @@ SetupWindow::SetupWindow():
                 client_side_mouse_check_button->value(client_side_mouse_it->get<bool>());
             }
 
+            json::const_iterator view_only_it;
+            if ((view_only_it = config_json.find("view_only")) != config_json.end() && view_only_it->is_boolean()) {
+                view_only_check_button->value(view_only_it->get<bool>());
+            }
+
             json::const_iterator verify_certs_it;
             if ((verify_certs_it = config_json.find("verify_certs")) != config_json.end() && verify_certs_it->is_boolean()) {
                 verify_certs_check_button->value(verify_certs_it->get<bool>());
@@ -134,6 +141,7 @@ void SetupWindow::complete() {
     password = password_input->value();
     bitrate = bitrate_spinner->value();
     client_side_mouse = client_side_mouse_check_button->value();
+    view_only = view_only_check_button->value();
     verify_certs = verify_certs_check_button->value();
     setup_complete = true;
     hide();
@@ -150,6 +158,7 @@ void SetupWindow::complete() {
                 {"address", address},
                 {"password", password},
                 {"client_side_mouse", client_side_mouse},
+                {"view_only", view_only},
                 {"verify_certs", verify_certs},
             };
             config_file << config_json;

@@ -28,6 +28,7 @@ int main(int argc, char* argv[]) {
     gst_init(&argc, &argv);
 
     bool client_side_mouse;
+    bool view_only;
     BandwidthEstimator bandwidth_estimator;
     pw::ClientConfig client_config;
 
@@ -52,6 +53,7 @@ int main(int argc, char* argv[]) {
             return 0;
         }
         client_side_mouse = setup_window.client_side_mouse;
+        view_only = setup_window.view_only;
         bandwidth_estimator = BandwidthEstimator(setup_window.bitrate);
         client_config.verify_mode = setup_window.verify_certs ? SSL_VERIFY_PEER : SSL_VERIFY_NONE;
 
@@ -76,13 +78,15 @@ int main(int argc, char* argv[]) {
             audio_track->setRtcpHandler(audio_session);
         }
 
-        ordered_channel = conn->createDataChannel("ordered-input");
-        unordered_channel = conn->createDataChannel("unordered-input",
-            {
-                .reliability = {
-                    .unordered = true,
-                },
-            });
+        if (!view_only) {
+            ordered_channel = conn->createDataChannel("ordered-input");
+            unordered_channel = conn->createDataChannel("unordered-input",
+                {
+                    .reliability = {
+                        .unordered = true,
+                    },
+                });
+        }
 
         {
             Waiter waiter;
@@ -309,7 +313,7 @@ int main(int argc, char* argv[]) {
         }
     }).detach();
 
-    VideoWindow video_window(video, client_side_mouse);
+    VideoWindow video_window(video, client_side_mouse, view_only);
     video_window.run(conn, ordered_channel, unordered_channel);
     return 0;
 }

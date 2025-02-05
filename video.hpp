@@ -45,10 +45,12 @@ protected:
 public:
     Video& video;
     const bool client_side_mouse;
+    const bool view_only;
 
-    VideoWindow(Video& video, bool client_side_mouse = false, int window_width = 960, int window_height = 540):
+    VideoWindow(Video& video, bool client_side_mouse = false, bool view_only = false, int window_width = 960, int window_height = 540):
         video(video),
-        client_side_mouse(client_side_mouse) {
+        client_side_mouse(client_side_mouse),
+        view_only(view_only) {
         SDL_Init(SDL_INIT_VIDEO);
 
         SDL_SetHint(SDL_HINT_APP_NAME, "Lux Client");
@@ -59,14 +61,18 @@ public:
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
         SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-        SDL_SetHint(SDL_HINT_ALLOW_ALT_TAB_WHILE_GRABBED, "0");
-        if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
-            std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+        if (!view_only) {
+            SDL_SetHint(SDL_HINT_ALLOW_ALT_TAB_WHILE_GRABBED, "0");
+            if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
+                std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+            }
         }
 
         window = SDL_CreateWindow("Lux Client", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-        SDL_SetRelativeMouseMode(client_side_mouse ? SDL_FALSE : SDL_TRUE);
-        SDL_SetWindowKeyboardGrab(window, SDL_TRUE);
+        if (!view_only) {
+            SDL_SetRelativeMouseMode(client_side_mouse ? SDL_FALSE : SDL_TRUE);
+            SDL_SetWindowKeyboardGrab(window, SDL_TRUE);
+        }
 
         gl_context = SDL_GL_CreateContext(window);
         SDL_GL_SetSwapInterval(1);
@@ -79,7 +85,7 @@ public:
     ~VideoWindow() {
         SDL_GL_DeleteContext(gl_context);
         SDL_DestroyWindow(window);
-        if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
+        if (!view_only && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
             std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
         }
         SDL_QuitSubSystem(SDL_INIT_VIDEO);
@@ -88,5 +94,5 @@ public:
     void letterbox(int& x, int& y, int& width, int& height) const;
     std::array<GLfloat, 16> orthographic_matrix() const;
     void window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) const;
-    void run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel);
+    void run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::DataChannel> ordered_channel = nullptr, std::shared_ptr<rtc::DataChannel> unordered_channel = nullptr);
 };

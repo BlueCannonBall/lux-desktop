@@ -229,14 +229,14 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             case SDL_WINDOWEVENT:
                 switch (event.window.event) {
                 case SDL_WINDOWEVENT_FOCUS_LOST: {
-                    if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
+                    if (!view_only && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
                         std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
                     }
                     break;
                 }
 
                 case SDL_WINDOWEVENT_FOCUS_GAINED: {
-                    if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
+                    if (!view_only && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
                         std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
                     }
                     break;
@@ -253,7 +253,8 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 break;
 
             case SDL_KEYDOWN:
-                if (!event.key.repeat &&
+                if (!view_only &&
+                    !event.key.repeat &&
                     event.key.keysym.sym != SDLK_F9 &&
                     event.key.keysym.sym != SDLK_F11 &&
                     event.key.keysym.sym != SDLK_BRIGHTNESSDOWN &&
@@ -270,7 +271,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 break;
 
             case SDL_KEYUP:
-                if (event.key.repeat) {
+                if (view_only || event.key.repeat) {
                     break;
                 }
 
@@ -298,45 +299,49 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 break;
 
             case SDL_MOUSEMOTION:
-                if (client_side_mouse) {
-                    if (ordered_channel->isOpen()) {
-                        int x;
-                        int y;
-                        window_pos_to_video_pos(event.motion.x, event.motion.y, x, y);
+                if (!view_only) {
+                    if (client_side_mouse) {
+                        if (ordered_channel->isOpen()) {
+                            int x;
+                            int y;
+                            window_pos_to_video_pos(event.motion.x, event.motion.y, x, y);
 
-                        json message = {
-                            {"type", "mousemoveabs"},
-                            {"x", x},
-                            {"y", y},
-                        };
-                        ordered_channel->send(message.dump());
-                    }
-                } else {
-                    if (unordered_channel->isOpen()) {
-                        json message = {
-                            {"type", "mousemove"},
-                            {"x", event.motion.xrel},
-                            {"y", event.motion.yrel},
-                        };
-                        unordered_channel->send(message.dump());
+                            json message = {
+                                {"type", "mousemoveabs"},
+                                {"x", x},
+                                {"y", y},
+                            };
+                            ordered_channel->send(message.dump());
+                        }
+                    } else {
+                        if (unordered_channel->isOpen()) {
+                            json message = {
+                                {"type", "mousemove"},
+                                {"x", event.motion.xrel},
+                                {"y", event.motion.yrel},
+                            };
+                            unordered_channel->send(message.dump());
+                        }
                     }
                 }
                 break;
 
             case SDL_MOUSEBUTTONDOWN:
-                if (!client_side_mouse && !SDL_GetRelativeMouseMode()) {
-                    SDL_SetRelativeMouseMode(SDL_TRUE);
-                } else if (ordered_channel->isOpen()) {
-                    json message = {
-                        {"type", "mousedown"},
-                        {"button", event.button.button - 1},
-                    };
-                    ordered_channel->send(message.dump());
+                if (!view_only) {
+                    if (!client_side_mouse && !SDL_GetRelativeMouseMode()) {
+                        SDL_SetRelativeMouseMode(SDL_TRUE);
+                    } else if (ordered_channel->isOpen()) {
+                        json message = {
+                            {"type", "mousedown"},
+                            {"button", event.button.button - 1},
+                        };
+                        ordered_channel->send(message.dump());
+                    }
                 }
                 break;
 
             case SDL_MOUSEBUTTONUP:
-                if (ordered_channel->isOpen()) {
+                if (!view_only && ordered_channel->isOpen()) {
                     json message = {
                         {"type", "mouseup"},
                         {"button", event.button.button - 1},
@@ -346,7 +351,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 break;
 
             case SDL_MOUSEWHEEL:
-                if (unordered_channel->isOpen()) {
+                if (!view_only && unordered_channel->isOpen()) {
                     json message = {
                         {"type", "wheel"},
                         {"x", (int) roundf(event.wheel.preciseX * 120.f)},

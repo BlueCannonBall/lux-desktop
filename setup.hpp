@@ -16,6 +16,7 @@ public:
     std::string password;
     unsigned int bitrate;
     bool client_side_mouse;
+    bool view_only;
     bool verify_certs;
     bool setup_complete = false;
 
@@ -39,6 +40,7 @@ protected:
     Fl_Secret_Input* password_input;
     Fl_Spinner* bitrate_spinner;
     Fl_Check_Button* client_side_mouse_check_button;
+    Fl_Check_Button* view_only_check_button;
     Fl_Check_Button* verify_certs_check_button;
     Fl_Button* login_button;
 
