@@ -70,8 +70,8 @@ public:
 
         window = SDL_CreateWindow("Lux Client", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
         if (!view_only) {
-            SDL_SetRelativeMouseMode(client_side_mouse ? SDL_FALSE : SDL_TRUE);
             SDL_SetWindowKeyboardGrab(window, SDL_TRUE);
+            SDL_SetRelativeMouseMode(client_side_mouse ? SDL_FALSE : SDL_TRUE);
         }
 
         gl_context = SDL_GL_CreateContext(window);

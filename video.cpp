@@ -216,6 +216,12 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
         if (conn->iceState() == rtc::PeerConnection::IceState::Closed ||
             conn->iceState() == rtc::PeerConnection::IceState::Disconnected ||
             conn->iceState() == rtc::PeerConnection::IceState::Failed) {
+            SDL_SetWindowFullscreen(window, 0);
+            SDL_SetRelativeMouseMode(SDL_FALSE);
+            SDL_SetWindowKeyboardGrab(window, SDL_FALSE);
+            if (!view_only && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
+                std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+            }
             fl_alert("The connection has closed.");
             break;
         }
