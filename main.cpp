@@ -7,6 +7,7 @@
 #include "waiter.hpp"
 #include <FL/Fl.H>
 #include <FL/fl_ask.H>
+#include <SDL2/SDL_main.h>
 #include <chrono>
 #include <gst/app/gstappsink.h>
 #include <gst/gst.h>
