@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
                     auto video = (Video*) data;
                     GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
                     if (GST_EVENT_TYPE(event) == GST_EVENT_CAPS) {
-                        GstCaps* caps = gst_caps_new_any();
+                        GstCaps* caps;
                         gst_event_parse_caps(event, &caps);
 
                         GstStructure* caps_struct = gst_caps_get_structure(caps, 0);
@@ -185,8 +185,6 @@ int main(int argc, char* argv[]) {
                         video->resized = true;
                         video->mutex.unlock();
                         video->cv.notify_one();
-
-                        gst_caps_unref(caps);
                     }
                     return GST_PAD_PROBE_OK;
                 },
@@ -321,5 +319,9 @@ int main(int argc, char* argv[]) {
 
     VideoWindow video_window(video, client_side_mouse, view_only);
     video_window.run(conn, ordered_channel, unordered_channel);
+
+    conn->close();
+    gst_element_set_state(video_pipeline.get(), GST_STATE_NULL);
+    gst_element_set_state(audio_pipeline.get(), GST_STATE_NULL);
     return 0;
 }
