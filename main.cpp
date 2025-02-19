@@ -199,15 +199,20 @@ int main(int argc, char* argv[]) {
             GstElement* appsink = gst_element_factory_make("appsink", nullptr);
             {
                 GstCaps* caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", nullptr);
-                g_object_set(appsink, "caps", caps, "emit-signals", TRUE, nullptr);
+                g_object_set(appsink, "caps", caps, nullptr);
                 gst_caps_unref(caps);
+
+                GstAppSinkCallbacks callbacks = {
+                    .new_sample = [](GstAppSink* appsink, gpointer data) {
+                        auto video = (Video*) data;
+                        GstSample* sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink));
+                        std::lock_guard<std::mutex> lock(video->mutex);
+                        video->set_sample(sample);
+                        return GST_FLOW_OK;
+                    },
+                };
+                gst_app_sink_set_callbacks(GST_APP_SINK(appsink), &callbacks, &video, nullptr);
             }
-            glib::connect_signal(appsink, "new-sample", [&video](GstElement* appsink) {
-                GstSample* sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink));
-                std::lock_guard<std::mutex> lock(video.mutex);
-                video.set_sample(sample);
-                return GST_FLOW_OK;
-            });
 
             gst_bin_add_many(GST_BIN(video_pipeline.get()),
                 appsrc,

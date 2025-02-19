@@ -8,7 +8,7 @@
 
 namespace glib {
     template <typename... Args, typename T, typename F>
-    void connect_signal(T* object, const std::string& signal_name, F&& handler) {
+    gulong connect_signal(T* object, const std::string& signal_name, F&& handler) {
         GClosure* closure = g_cclosure_new(
             G_CALLBACK(+[](T* object, Args... args, F* handler) {
                 return (*handler)(object, args...);
@@ -17,7 +17,7 @@ namespace glib {
             [](gpointer data, GClosure*) {
                 delete (F*) data;
             });
-        g_signal_connect_closure(object, signal_name.c_str(), closure, FALSE);
+        return g_signal_connect_closure(object, signal_name.c_str(), closure, FALSE);
     }
 
     template <typename T>
@@ -60,8 +60,8 @@ namespace glib {
         }
 
         template <typename... Args, typename F>
-        void connect_signal(const std::string& signal_name, F&& handler) {
-            glib::connect_signal<Args...>(object, signal_name, std::forward<F>(handler));
+        gulong connect_signal(const std::string& signal_name, F&& handler) {
+            return glib::connect_signal<Args...>(object, signal_name, std::forward<F>(handler));
         }
 
         T* get() const {
