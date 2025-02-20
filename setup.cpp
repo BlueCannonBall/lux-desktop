@@ -30,14 +30,16 @@ public:
 };
 
 std::filesystem::path SetupWindow::get_config_path() {
-    std::string ret;
+    std::filesystem::path ret;
 #ifdef _WIN32
     if (char* appdata = getenv("APPDATA")) {
-        ret = std::string(appdata) + "\\lux-desktop";
+        ret = std::filesystem::path(appdata) / "lux-desktop";
     }
 #else
-    if (char* home = getenv("HOME")) {
-        ret = std::string(home) + "/.config/lux-desktop";
+    if (char* xdg_config_home = getenv("XDG_CONFIG_HOME")) {
+        ret = std::filesystem::path(xdg_config_home) / "lux-desktop";
+    } else if (char* home = getenv("HOME")) {
+        ret = std::filesystem::path(home) / ".config" / "lux-desktop";
     }
 #endif
     return ret;

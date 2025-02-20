@@ -384,6 +384,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, video.width, video.height, GL_RGB, GL_UNSIGNED_BYTE, map.data);
             }
             gst_buffer_unmap(buf, &map);
+            video.set_sample(nullptr);
         }
         video.mutex.unlock();
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
