@@ -3,67 +3,9 @@
 #include "keys.hpp"
 #include <FL/fl_ask.H>
 #include <math.h>
+#include <string.h>
 
 using nlohmann::json;
-
-const GLchar* vertex_src =
-    "#version 330 core\n"
-    "layout(location = 0) in vec2 position;\n"
-    "layout(location = 1) in vec2 texCoord;\n"
-    "out vec2 TexCoord;\n"
-    "uniform mat4 projection;\n"
-    "uniform vec2 user_pos;"
-    "void main() {\n"
-    "    TexCoord = texCoord;\n"
-    "    gl_Position = projection * vec4(position + user_pos, 0.0, 1.0);\n"
-    "}\n";
-
-const GLchar* fragment_src =
-    "#version 330 core\n"
-    "in vec2 TexCoord;\n"
-    "out vec4 outColor;\n"
-    "uniform sampler2D tex;\n"
-    "void main() {\n"
-    "    outColor = texture(tex, TexCoord);\n"
-    "}\n";
-
-void VideoWindow::handle_resize(GLuint program, GLuint vbo) {
-    int x;
-    int y;
-    int width;
-    int height;
-    letterbox(x, y, width, height);
-
-    GLuint loc = glGetUniformLocation(program, "user_pos");
-    glUniform2f(loc, x, y);
-
-    auto matrix = orthographic_matrix();
-    {
-        GLuint loc = glGetUniformLocation(program, "projection");
-        glUniformMatrix4fv(loc, 1, GL_FALSE, matrix.data());
-    }
-
-    std::array<GLfloat, 16> vertices = {
-        0.f,
-        0.f,
-        0.f,
-        0.f,
-        (GLfloat) width,
-        0.f,
-        1.f,
-        0.f,
-        (GLfloat) width,
-        (GLfloat) height,
-        1.f,
-        1.f,
-        0.f,
-        (GLfloat) height,
-        0.f,
-        1.f,
-    };
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), vertices.data(), GL_DYNAMIC_DRAW);
-}
 
 void VideoWindow::letterbox(int& x, int& y, int& width, int& height) const {
     int window_width;
@@ -90,37 +32,6 @@ void VideoWindow::letterbox(int& x, int& y, int& width, int& height) const {
     }
 }
 
-std::array<GLfloat, 16> VideoWindow::orthographic_matrix() const {
-    int window_width;
-    int window_height;
-    SDL_GetWindowSize(window, &window_width, &window_height);
-
-    GLfloat c0r0 = 2.f / window_width;
-    GLfloat c0r1 = 0.f;
-    GLfloat c0r2 = 0.f;
-    GLfloat c0r3 = 0.f;
-    GLfloat c1r0 = 0.f;
-    GLfloat c1r1 = 2.f / -window_height;
-    GLfloat c1r2 = 0.f;
-    GLfloat c1r3 = 0.f;
-    GLfloat c2r0 = 0.f;
-    GLfloat c2r1 = 0.f;
-    GLfloat c2r2 = -2.f / 1.f;
-    GLfloat c2r3 = 0.f;
-    GLfloat c3r0 = (GLfloat) -window_width / window_width;
-    GLfloat c3r1 = (GLfloat) -window_height / -window_height;
-    GLfloat c3r2 = -1.f;
-    GLfloat c3r3 = 1.f;
-    // clang-format off
-    return {
-        c0r0, c0r1, c0r2, c0r3,
-        c1r0, c1r1, c1r2, c1r3,
-        c2r0, c2r1, c2r2, c2r3,
-        c3r0, c3r1, c3r2, c3r3,
-    };
-    // clang-format on
-}
-
 void VideoWindow::window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) const {
     int window_width;
     int window_height;
@@ -143,76 +54,8 @@ void VideoWindow::window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) 
 }
 
 void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
-    SDL_GL_MakeCurrent(window, gl_context);
-
-    const GLubyte* vendor = glGetString(GL_VENDOR);
-    const GLubyte* renderer = glGetString(GL_RENDERER);
-    std::cout << "Graphics hardware info: " << vendor << ", " << renderer << std::endl;
-
-    GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_src, nullptr);
-    glCompileShader(vertex_shader);
-
-    GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_src, nullptr);
-    glCompileShader(fragment_shader);
-
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-    glLinkProgram(program);
-
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
-
-    glUseProgram(program);
-
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    {
-        GLuint loc = glGetUniformLocation(program, "tex");
-        glUniform1i(loc, 0);
-    }
-
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
-
-    video.mutex.lock();
-    handle_resize(program, vbo);
-    video.mutex.unlock();
-
-    // clang-format off
-    GLuint indices[] = {
-        0, 1, 2,
-        0, 2, 3,
-    };
-    // clang-format on
-
-    GLuint ebo;
-    glGenBuffers(1, &ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 4, nullptr);
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 4, (GLvoid*) (sizeof(GLfloat) * 2));
-    glEnableVertexAttribArray(1);
-
-    glClearColor(0.f, 0.f, 0.f, 1.f);
-
-    for (bool running = true; running; SDL_GL_SwapWindow(window)) {
+    SDL_Texture* texture = nullptr;
+    for (bool running = true; running; SDL_RenderPresent(renderer)) {
         if (conn->iceState() == rtc::PeerConnection::IceState::Closed ||
             conn->iceState() == rtc::PeerConnection::IceState::Disconnected ||
             conn->iceState() == rtc::PeerConnection::IceState::Failed) {
@@ -245,14 +88,6 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                     if (!view_only && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
                         std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
                     }
-                    break;
-                }
-
-                case SDL_WINDOWEVENT_RESIZED: {
-                    video.mutex.lock();
-                    handle_resize(program, vbo);
-                    video.mutex.unlock();
-                    glViewport(0, 0, event.window.data1, event.window.data2);
                     break;
                 }
                 }
@@ -369,31 +204,34 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             }
         }
 
-        glClear(GL_COLOR_BUFFER_BIT);
-
         video.mutex.lock();
         if (video.sample) {
+            if (video.resized) {
+                SDL_DestroyTexture(texture);
+                texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, video.width, video.height);
+            }
+
             GstBuffer* buf = gst_sample_get_buffer(video.sample);
             GstMapInfo map;
             gst_buffer_map(buf, &map, GST_MAP_READ);
-            if (video.resized) {
-                handle_resize(program, vbo);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, video.width, video.height, 0, GL_RGB, GL_UNSIGNED_BYTE, map.data);
-                video.resized = false;
-            } else {
-                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, video.width, video.height, GL_RGB, GL_UNSIGNED_BYTE, map.data);
-            }
+
+            void* pixels = nullptr;
+            int pitch;
+            SDL_LockTexture(texture, nullptr, &pixels, &pitch);
+            memcpy(pixels, map.data, video.width * video.height * 3);
+            SDL_UnlockTexture(texture);
+
             gst_buffer_unmap(buf, &map);
+
             video.set_sample(nullptr);
         }
         video.mutex.unlock();
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-    }
 
+        SDL_Rect dest;
+        letterbox(dest.x, dest.y, dest.w, dest.h);
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, texture, nullptr, &dest);
+    }
 cleanup:
-    glDeleteVertexArrays(1, &vao);
-    glDeleteBuffers(1, &vbo);
-    glDeleteBuffers(1, &ebo);
-    glDeleteTextures(1, &texture);
-    glDeleteProgram(program);
+    SDL_DestroyTexture(texture);
 }

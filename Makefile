@@ -11,13 +11,13 @@ ifeq ($(OS),Windows_NT)
 endif
 
 compiler := $(CXX)
-compilation_flags := -Wall -std=c++17 -O3 -pthread -Ilibdatachannel/include `pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0 glew`
-libraries := -lfltk -lSDL2main -lSDL2 -lssl -lcrypto `pkg-config --libs gstreamer-1.0 gstreamer-app-1.0 glew`
+compilation_flags := -Wall -std=c++17 -O3 -march=native -mtune=native -pthread -Ilibdatachannel/include `pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0`
+libraries := -lfltk -lSDL2main -lSDL2 -lssl -lcrypto `pkg-config --libs gstreamer-1.0 gstreamer-app-1.0`
 static_libraries := libdatachannel/build/libdatachannel-static.a libdatachannel/build/deps/libjuice/libjuice-static.a libdatachannel/build/deps/libsrtp/libsrtp2.a libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a
 
 ifeq ($(OS),Windows_NT)
-	compilation_flags := -Wall -std=c++17 -O3 -pthread -static-libgcc -static-libstdc++ -mwindows -Ilibdatachannel/include -Llibdatachannel/build `pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0 glew`
-	libraries := -lfltk -lSDL2main -lSDL2 -lopengl32 -ldatachannel -lssl -lcrypto -lws2_32 -lcomctl32 -lole32 -luuid `pkg-config --libs gstreamer-1.0 gstreamer-app-1.0 glew`
+	compilation_flags := -Wall -std=c++17 -O3 -march=native -mtune=native -pthread -static-libgcc -static-libstdc++ -mwindows -Ilibdatachannel/include -Llibdatachannel/build `pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0`
+	libraries := -lfltk -lSDL2main -lSDL2 -ldatachannel -lssl -lcrypto -lws2_32 -lcomctl32 -lole32 -luuid `pkg-config --libs gstreamer-1.0 gstreamer-app-1.0`
 	static_libraries :=
 endif
 
