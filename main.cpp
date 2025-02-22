@@ -308,7 +308,7 @@ int main(int argc, char* argv[]) {
         while (conn->iceState() != rtc::PeerConnection::IceState::Closed &&
                conn->iceState() != rtc::PeerConnection::IceState::Disconnected &&
                conn->iceState() != rtc::PeerConnection::IceState::Failed) {
-            if (bwe_waiter.wait_for(std::chrono::milliseconds(500)) == std::cv_status::timeout) {
+            if (bwe_waiter.wait_for(std::chrono::milliseconds(500)) == std::cv_status::no_timeout) {
                 break;
             }
             video_track->requestBitrate(bandwidth_estimator.estimate(0.5) * 1000);
