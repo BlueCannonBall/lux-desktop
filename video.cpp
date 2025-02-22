@@ -215,7 +215,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             GstMapInfo map;
             gst_buffer_map(buf, &map, GST_MAP_READ);
 
-            void* pixels = nullptr;
+            void* pixels;
             int pitch;
             SDL_LockTexture(texture, nullptr, &pixels, &pitch);
             memcpy(pixels, map.data, video.width * video.height * 3);
