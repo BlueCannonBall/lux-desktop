@@ -14,7 +14,7 @@ namespace glib {
                 return (*handler)(object, args...);
             }),
             new F(handler),
-            [](gpointer data, GClosure*) {
+            [](void* data, GClosure*) {
                 delete (F*) data;
             });
         return g_signal_connect_closure(object, signal_name.c_str(), closure, FALSE);

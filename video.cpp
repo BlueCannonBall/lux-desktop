@@ -9,6 +9,8 @@
 
 using nlohmann::json;
 
+Uint32 VIDEO_FRAME_EVENT = SDL_RegisterEvents(1);
+
 void VideoWindow::set_keyboard_grab(bool grabbed) {
     if (grabbed) {
         if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
@@ -84,136 +86,139 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
         }
 
         SDL_Event event;
-        while (SDL_WaitEventTimeout(&event, 1)) {
-            switch (event.type) {
-            case SDL_QUIT:
-                goto cleanup;
+        if (SDL_WaitEvent(&event)) {
+            do {
+                switch (event.type) {
+                case SDL_QUIT:
+                    goto cleanup;
 
-            case SDL_WINDOWEVENT:
-                switch (event.window.event) {
-                case SDL_WINDOWEVENT_EXPOSED:
-                    dirty = true;
+                case SDL_WINDOWEVENT:
+                    switch (event.window.event) {
+                    case SDL_WINDOWEVENT_EXPOSED:
+                        dirty = true;
+                        break;
 
-                case SDL_WINDOWEVENT_FOCUS_LOST:
-                    if (!view_only) set_keyboard_grab(false);
+                    case SDL_WINDOWEVENT_FOCUS_LOST:
+                        if (!view_only) set_keyboard_grab(false);
+                        break;
+
+                    case SDL_WINDOWEVENT_FOCUS_GAINED:
+                        if (!view_only) set_keyboard_grab(true);
+                        break;
+                    }
                     break;
 
-                case SDL_WINDOWEVENT_FOCUS_GAINED:
-                    if (!view_only) set_keyboard_grab(true);
-                    break;
-                }
-                break;
-
-            case SDL_KEYDOWN:
-                if (!view_only &&
-                    !event.key.repeat &&
-                    event.key.keysym.sym != SDLK_F9 &&
-                    event.key.keysym.sym != SDLK_F11 &&
-                    event.key.keysym.sym != SDLK_BRIGHTNESSDOWN &&
-                    event.key.keysym.sym != SDLK_BRIGHTNESSUP &&
-                    event.key.keysym.sym != SDLK_VOLUMEDOWN &&
-                    event.key.keysym.sym != SDLK_VOLUMEUP &&
-                    ordered_channel->isOpen()) {
-                    json message = {
-                        {"type", "keydown"},
-                        {"key", sdl_to_browser_key(event.key.keysym.sym)},
-                    };
-                    ordered_channel->send(message.dump());
-                }
-                break;
-
-            case SDL_KEYUP:
-                if (!event.key.repeat) {
-                    if (event.key.keysym.sym == SDLK_F11) {
-                        Uint32 flags = SDL_GetWindowFlags(window);
-                        if (flags & SDL_WINDOW_FULLSCREEN) {
-                            SDL_SetWindowFullscreen(window, 0);
-                        } else {
-                            SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-                        }
-                    } else if (!view_only) {
-                        if (event.key.keysym.sym == SDLK_F9) {
-                            if (!client_side_mouse) {
-                                SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() ? SDL_FALSE : SDL_TRUE);
-                            }
-                        } else if (event.key.keysym.sym != SDLK_BRIGHTNESSDOWN &&
-                                   event.key.keysym.sym != SDLK_BRIGHTNESSUP &&
-                                   event.key.keysym.sym != SDLK_VOLUMEDOWN &&
-                                   event.key.keysym.sym != SDLK_VOLUMEUP &&
-                                   ordered_channel->isOpen()) {
-                            json message = {
-                                {"type", "keyup"},
-                                {"key", sdl_to_browser_key(event.key.keysym.sym)},
-                            };
-                            ordered_channel->send(message.dump());
-                        }
-                    }
-                }
-                break;
-
-            case SDL_MOUSEMOTION:
-                if (!view_only) {
-                    if (client_side_mouse) {
-                        if (ordered_channel->isOpen()) {
-                            int x;
-                            int y;
-                            window_pos_to_video_pos(event.motion.x, event.motion.y, x, y);
-
-                            json message = {
-                                {"type", "mousemoveabs"},
-                                {"x", x},
-                                {"y", y},
-                            };
-                            ordered_channel->send(message.dump());
-                        }
-                    } else {
-                        if (unordered_channel->isOpen()) {
-                            json message = {
-                                {"type", "mousemove"},
-                                {"x", event.motion.xrel},
-                                {"y", event.motion.yrel},
-                            };
-                            unordered_channel->send(message.dump());
-                        }
-                    }
-                }
-                break;
-
-            case SDL_MOUSEBUTTONDOWN:
-                if (!view_only) {
-                    if (!client_side_mouse && !SDL_GetRelativeMouseMode()) {
-                        SDL_SetRelativeMouseMode(SDL_TRUE);
-                    } else if (ordered_channel->isOpen()) {
+                case SDL_KEYDOWN:
+                    if (!view_only &&
+                        !event.key.repeat &&
+                        event.key.keysym.sym != SDLK_F9 &&
+                        event.key.keysym.sym != SDLK_F11 &&
+                        event.key.keysym.sym != SDLK_BRIGHTNESSDOWN &&
+                        event.key.keysym.sym != SDLK_BRIGHTNESSUP &&
+                        event.key.keysym.sym != SDLK_VOLUMEDOWN &&
+                        event.key.keysym.sym != SDLK_VOLUMEUP &&
+                        ordered_channel->isOpen()) {
                         json message = {
-                            {"type", "mousedown"},
+                            {"type", "keydown"},
+                            {"key", sdl_to_browser_key(event.key.keysym.sym)},
+                        };
+                        ordered_channel->send(message.dump());
+                    }
+                    break;
+
+                case SDL_KEYUP:
+                    if (!event.key.repeat) {
+                        if (event.key.keysym.sym == SDLK_F11) {
+                            Uint32 flags = SDL_GetWindowFlags(window);
+                            if (flags & SDL_WINDOW_FULLSCREEN) {
+                                SDL_SetWindowFullscreen(window, 0);
+                            } else {
+                                SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+                            }
+                        } else if (!view_only) {
+                            if (event.key.keysym.sym == SDLK_F9) {
+                                if (!client_side_mouse) {
+                                    SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() ? SDL_FALSE : SDL_TRUE);
+                                }
+                            } else if (event.key.keysym.sym != SDLK_BRIGHTNESSDOWN &&
+                                       event.key.keysym.sym != SDLK_BRIGHTNESSUP &&
+                                       event.key.keysym.sym != SDLK_VOLUMEDOWN &&
+                                       event.key.keysym.sym != SDLK_VOLUMEUP &&
+                                       ordered_channel->isOpen()) {
+                                json message = {
+                                    {"type", "keyup"},
+                                    {"key", sdl_to_browser_key(event.key.keysym.sym)},
+                                };
+                                ordered_channel->send(message.dump());
+                            }
+                        }
+                    }
+                    break;
+
+                case SDL_MOUSEMOTION:
+                    if (!view_only) {
+                        if (client_side_mouse) {
+                            if (ordered_channel->isOpen()) {
+                                int x;
+                                int y;
+                                window_pos_to_video_pos(event.motion.x, event.motion.y, x, y);
+
+                                json message = {
+                                    {"type", "mousemoveabs"},
+                                    {"x", x},
+                                    {"y", y},
+                                };
+                                ordered_channel->send(message.dump());
+                            }
+                        } else {
+                            if (unordered_channel->isOpen()) {
+                                json message = {
+                                    {"type", "mousemove"},
+                                    {"x", event.motion.xrel},
+                                    {"y", event.motion.yrel},
+                                };
+                                unordered_channel->send(message.dump());
+                            }
+                        }
+                    }
+                    break;
+
+                case SDL_MOUSEBUTTONDOWN:
+                    if (!view_only) {
+                        if (!client_side_mouse && !SDL_GetRelativeMouseMode()) {
+                            SDL_SetRelativeMouseMode(SDL_TRUE);
+                        } else if (ordered_channel->isOpen()) {
+                            json message = {
+                                {"type", "mousedown"},
+                                {"button", event.button.button - 1},
+                            };
+                            ordered_channel->send(message.dump());
+                        }
+                    }
+                    break;
+
+                case SDL_MOUSEBUTTONUP:
+                    if (!view_only && ordered_channel->isOpen()) {
+                        json message = {
+                            {"type", "mouseup"},
                             {"button", event.button.button - 1},
                         };
                         ordered_channel->send(message.dump());
                     }
-                }
-                break;
+                    break;
 
-            case SDL_MOUSEBUTTONUP:
-                if (!view_only && ordered_channel->isOpen()) {
-                    json message = {
-                        {"type", "mouseup"},
-                        {"button", event.button.button - 1},
-                    };
-                    ordered_channel->send(message.dump());
+                case SDL_MOUSEWHEEL:
+                    if (!view_only && unordered_channel->isOpen()) {
+                        json message = {
+                            {"type", "wheel"},
+                            {"x", (int) roundf(event.wheel.preciseX * 120.f)},
+                            {"y", (int) roundf(event.wheel.preciseY * -120.f)},
+                        };
+                        unordered_channel->send(message.dump());
+                    }
+                    break;
                 }
-                break;
-
-            case SDL_MOUSEWHEEL:
-                if (!view_only && unordered_channel->isOpen()) {
-                    json message = {
-                        {"type", "wheel"},
-                        {"x", (int) roundf(event.wheel.preciseX * 120.f)},
-                        {"y", (int) roundf(event.wheel.preciseY * -120.f)},
-                    };
-                    unordered_channel->send(message.dump());
-                }
-                break;
-            }
+            } while (SDL_PollEvent(&event));
         }
 
         video.mutex.lock();
@@ -221,22 +226,22 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             if (video.resized) {
                 SDL_DestroyTexture(texture);
                 texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, video.width, video.height);
+                video.resized = false;
+            } else {
+                GstBuffer* buf = gst_sample_get_buffer(video.sample);
+                GstMapInfo map;
+                gst_buffer_map(buf, &map, GST_MAP_READ);
+
+                void* pixels;
+                int pitch;
+                SDL_LockTexture(texture, nullptr, &pixels, &pitch);
+                memcpy(pixels, map.data, video.width * video.height * 3);
+                SDL_UnlockTexture(texture);
+                dirty = true;
+
+                gst_buffer_unmap(buf, &map);
+                video.set_sample(nullptr);
             }
-
-            GstBuffer* buf = gst_sample_get_buffer(video.sample);
-            GstMapInfo map;
-            gst_buffer_map(buf, &map, GST_MAP_READ);
-
-            void* pixels;
-            int pitch;
-            SDL_LockTexture(texture, nullptr, &pixels, &pitch);
-            memcpy(pixels, map.data, video.width * video.height * 3);
-            SDL_UnlockTexture(texture);
-            dirty = true;
-
-            gst_buffer_unmap(buf, &map);
-            gst_sample_unref(video.sample);
-            video.sample = nullptr;
         }
         video.mutex.unlock();
 

@@ -31,7 +31,6 @@ int main(int argc, char* argv[]) {
     bool client_side_mouse;
     bool view_only;
     BandwidthEstimator bandwidth_estimator;
-    pw::ClientConfig client_config;
 
     std::shared_ptr<rtc::PeerConnection> conn;
     std::shared_ptr<rtc::Track> video_track;
@@ -56,7 +55,6 @@ int main(int argc, char* argv[]) {
         client_side_mouse = setup_window.client_side_mouse;
         view_only = setup_window.view_only;
         bandwidth_estimator = BandwidthEstimator(setup_window.bitrate);
-        client_config.verify_mode = setup_window.verify_certs ? SSL_VERIFY_PEER : SSL_VERIFY_NONE;
 
         rtc::Configuration config;
         config.iceServers.emplace_back("stun.l.google.com:19302");
@@ -72,12 +70,8 @@ int main(int argc, char* argv[]) {
             audio_track = conn->addTrack(audio);
         }
 
-        {
-            auto video_session = std::make_shared<rtc::RtcpReceivingSession>();
-            auto audio_session = std::make_shared<rtc::RtcpReceivingSession>();
-            video_track->setRtcpHandler(video_session);
-            audio_track->setRtcpHandler(audio_session);
-        }
+        video_track->setRtcpHandler(std::make_shared<rtc::RtcpReceivingSession>());
+        audio_track->setRtcpHandler(std::make_shared<rtc::RtcpReceivingSession>());
 
         if (!view_only) {
             ordered_channel = conn->createDataChannel("ordered-input");
@@ -117,7 +111,7 @@ int main(int argc, char* argv[]) {
         };
 
         pw::HTTPResponse resp;
-        if (pw::fetch("POST", "https://" + setup_window.address + "/offer", resp, req_json.dump(), {{"Content-Type", "application/json"}}, client_config) == PN_ERROR) {
+        if (pw::fetch("POST", "https://" + setup_window.address + "/offer", resp, req_json.dump(), {{"Content-Type", "application/json"}}, {.verify_mode = setup_window.verify_certs ? SSL_VERIFY_PEER : SSL_VERIFY_NONE}) == PN_ERROR) {
             fl_alert("Failed to connect: %s", pw::universal_strerror().c_str());
             continue;
         } else if (resp.status_code != 200) {
@@ -170,7 +164,7 @@ int main(int argc, char* argv[]) {
             GstElement* avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
             {
                 glib::Object<GstPad> pad = gst_element_get_static_pad(avdec_h264, "src");
-                gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_BOTH, [](GstPad* pad, GstPadProbeInfo* info, gpointer data) {
+                gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_BOTH, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
                     auto video = (Video*) data;
                     GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
                     if (GST_EVENT_TYPE(event) == GST_EVENT_CAPS) {
@@ -181,8 +175,8 @@ int main(int argc, char* argv[]) {
                         video->mutex.lock();
                         gst_structure_get_int(caps_struct, "width", &video->width);
                         gst_structure_get_int(caps_struct, "height", &video->height);
-                        video->set_sample(nullptr);
                         video->resized = true;
+                        video->set_sample(nullptr);
                         video->mutex.unlock();
                         video->cv.notify_one();
                     }
@@ -201,11 +195,17 @@ int main(int argc, char* argv[]) {
                 gst_caps_unref(caps);
 
                 GstAppSinkCallbacks callbacks = {
-                    .new_sample = [](GstAppSink* appsink, gpointer data) {
+                    .new_sample = [](GstAppSink* appsink, void* data) {
                         auto video = (Video*) data;
+
                         GstSample* sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink));
-                        std::lock_guard<std::mutex> lock(video->mutex);
+                        video->mutex.lock();
                         video->set_sample(sample);
+                        video->mutex.unlock();
+
+                        SDL_Event event = {.type = VIDEO_FRAME_EVENT};
+                        SDL_PushEvent(&event);
+
                         return GST_FLOW_OK;
                     },
                 };
@@ -301,22 +301,22 @@ int main(int argc, char* argv[]) {
     {
         std::unique_lock<std::mutex> lock(video.mutex);
         video.cv.wait(lock);
-        lock.unlock();
     }
 
-    std::thread([conn, video_track, unordered_channel, &bandwidth_estimator]() {
+    std::thread bwe_thread([conn, video_track, unordered_channel, &bandwidth_estimator]() {
         while (conn->iceState() != rtc::PeerConnection::IceState::Closed &&
                conn->iceState() != rtc::PeerConnection::IceState::Disconnected &&
                conn->iceState() != rtc::PeerConnection::IceState::Failed) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
             video_track->requestBitrate(bandwidth_estimator.estimate(0.5) * 1000);
         }
-    }).detach();
+    });
 
     VideoWindow video_window(video, client_side_mouse, view_only);
     video_window.run(conn, ordered_channel, unordered_channel);
 
     conn->close();
+    bwe_thread.join();
     gst_element_set_state(video_pipeline.get(), GST_STATE_NULL);
     gst_element_set_state(audio_pipeline.get(), GST_STATE_NULL);
     return 0;

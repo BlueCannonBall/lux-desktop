@@ -8,6 +8,8 @@
 #include <mutex>
 #include <rtc/rtc.hpp>
 
+extern Uint32 VIDEO_FRAME_EVENT;
+
 struct Video {
     std::mutex mutex;
     std::condition_variable cv;
