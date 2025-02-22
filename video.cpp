@@ -55,7 +55,7 @@ void VideoWindow::window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) 
 
 void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
     SDL_Texture* texture = nullptr;
-    for (bool running = true; running; SDL_RenderPresent(renderer)) {
+    for (bool running = true, dirty = false; running;) {
         if (conn->iceState() == rtc::PeerConnection::IceState::Closed ||
             conn->iceState() == rtc::PeerConnection::IceState::Disconnected ||
             conn->iceState() == rtc::PeerConnection::IceState::Failed) {
@@ -77,6 +77,9 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
 
             case SDL_WINDOWEVENT:
                 switch (event.window.event) {
+                case SDL_WINDOWEVENT_EXPOSED:
+                    dirty = true;
+
                 case SDL_WINDOWEVENT_FOCUS_LOST: {
                     if (!view_only && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
                         std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
@@ -220,17 +223,22 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             SDL_LockTexture(texture, nullptr, &pixels, &pitch);
             memcpy(pixels, map.data, video.width * video.height * 3);
             SDL_UnlockTexture(texture);
+            dirty = true;
 
             gst_buffer_unmap(buf, &map);
-
-            video.set_sample(nullptr);
+            gst_sample_unref(video.sample);
+            video.sample = nullptr;
         }
         video.mutex.unlock();
 
-        SDL_Rect dest;
-        letterbox(dest.x, dest.y, dest.w, dest.h);
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, texture, nullptr, &dest);
+        if (dirty) {
+            SDL_Rect dest;
+            letterbox(dest.x, dest.y, dest.w, dest.h);
+            SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, texture, nullptr, &dest);
+            SDL_RenderPresent(renderer);
+            dirty = false;
+        }
     }
 cleanup:
     SDL_DestroyTexture(texture);
