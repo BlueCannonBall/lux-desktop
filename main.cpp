@@ -303,11 +303,14 @@ int main(int argc, char* argv[]) {
         video.cv.wait(lock);
     }
 
-    std::thread bwe_thread([conn, video_track, unordered_channel, &bandwidth_estimator]() {
+    Waiter bwe_waiter;
+    std::thread bwe_thread([conn, video_track, unordered_channel, &bandwidth_estimator, &bwe_waiter]() {
         while (conn->iceState() != rtc::PeerConnection::IceState::Closed &&
                conn->iceState() != rtc::PeerConnection::IceState::Disconnected &&
                conn->iceState() != rtc::PeerConnection::IceState::Failed) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            if (bwe_waiter.wait_for(std::chrono::milliseconds(500)) == std::cv_status::timeout) {
+                break;
+            }
             video_track->requestBitrate(bandwidth_estimator.estimate(0.5) * 1000);
         }
     });
@@ -316,6 +319,7 @@ int main(int argc, char* argv[]) {
     video_window.run(conn, ordered_channel, unordered_channel);
 
     conn->close();
+    bwe_waiter.notify_one();
     bwe_thread.join();
     gst_element_set_state(video_pipeline.get(), GST_STATE_NULL);
     gst_element_set_state(audio_pipeline.get(), GST_STATE_NULL);
