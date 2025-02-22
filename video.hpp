@@ -4,11 +4,9 @@
 #include <assert.h>
 #include <condition_variable>
 #include <gst/gstsample.h>
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <rtc/rtc.hpp>
-#include <stdlib.h>
 
 struct Video {
     std::mutex mutex;
@@ -39,6 +37,8 @@ protected:
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* texture = nullptr;
 
+    void set_keyboard_grab(bool grabbed);
+
 public:
     Video& video;
     const bool client_side_mouse;
@@ -57,10 +57,7 @@ public:
 
         window = SDL_CreateWindow("Lux Client", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
         if (!view_only) {
-            if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
-                std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
-            }
-            SDL_SetWindowKeyboardGrab(window, SDL_TRUE);
+            set_keyboard_grab(true);
             SDL_SetRelativeMouseMode(client_side_mouse ? SDL_FALSE : SDL_TRUE);
         }
 
@@ -71,10 +68,13 @@ public:
 
     ~VideoWindow() {
         SDL_DestroyRenderer(renderer);
-        if (!view_only && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
-            std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+
+        if (!view_only) {
+            SDL_SetRelativeMouseMode(SDL_FALSE);
+            set_keyboard_grab(false);
         }
         SDL_DestroyWindow(window);
+
         SDL_QuitSubSystem(SDL_INIT_VIDEO);
     }
 

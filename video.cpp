@@ -2,10 +2,26 @@
 #include "json.hpp"
 #include "keys.hpp"
 #include <FL/fl_ask.H>
+#include <iostream>
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 using nlohmann::json;
+
+void VideoWindow::set_keyboard_grab(bool grabbed) {
+    if (grabbed) {
+        if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
+            std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+        }
+        SDL_SetWindowKeyboardGrab(window, SDL_TRUE);
+    } else {
+        if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
+            std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+        }
+        SDL_SetWindowKeyboardGrab(window, SDL_FALSE);
+    }
+}
 
 void VideoWindow::letterbox(int& x, int& y, int& width, int& height) const {
     int window_width;
@@ -38,7 +54,6 @@ void VideoWindow::window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) 
     SDL_GetWindowSize(window, &window_width, &window_height);
 
     std::lock_guard<std::mutex> lock(video.mutex);
-
     float video_aspect_ratio = (float) video.width / video.height;
     float window_aspect_ratio = (float) window_width / window_height;
     if (video_aspect_ratio > window_aspect_ratio) {
@@ -60,17 +75,16 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             conn->iceState() == rtc::PeerConnection::IceState::Disconnected ||
             conn->iceState() == rtc::PeerConnection::IceState::Failed) {
             SDL_SetWindowFullscreen(window, 0);
-            SDL_SetRelativeMouseMode(SDL_FALSE);
-            SDL_SetWindowKeyboardGrab(window, SDL_FALSE);
-            if (!view_only && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
-                std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+            if (!view_only) {
+                SDL_SetRelativeMouseMode(SDL_FALSE);
+                set_keyboard_grab(false);
             }
             fl_alert("The connection has closed.");
             break;
         }
 
         SDL_Event event;
-        while (SDL_PollEvent(&event)) {
+        while (SDL_WaitEventTimeout(&event, 1)) {
             switch (event.type) {
             case SDL_QUIT:
                 goto cleanup;
@@ -80,19 +94,13 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 case SDL_WINDOWEVENT_EXPOSED:
                     dirty = true;
 
-                case SDL_WINDOWEVENT_FOCUS_LOST: {
-                    if (!view_only && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
-                        std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
-                    }
+                case SDL_WINDOWEVENT_FOCUS_LOST:
+                    if (!view_only) set_keyboard_grab(false);
                     break;
-                }
 
-                case SDL_WINDOWEVENT_FOCUS_GAINED: {
-                    if (!view_only && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
-                        std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
-                    }
+                case SDL_WINDOWEVENT_FOCUS_GAINED:
+                    if (!view_only) set_keyboard_grab(true);
                     break;
-                }
                 }
                 break;
 
@@ -125,8 +133,9 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                         }
                     } else if (!view_only) {
                         if (event.key.keysym.sym == SDLK_F9) {
-                            if (!client_side_mouse) SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() ? SDL_FALSE : SDL_TRUE);
-                            SDL_SetWindowKeyboardGrab(window, SDL_GetWindowKeyboardGrab(window) ? SDL_FALSE : SDL_TRUE);
+                            if (!client_side_mouse) {
+                                SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() ? SDL_FALSE : SDL_TRUE);
+                            }
                         } else if (event.key.keysym.sym != SDLK_BRIGHTNESSDOWN &&
                                    event.key.keysym.sym != SDLK_BRIGHTNESSUP &&
                                    event.key.keysym.sym != SDLK_VOLUMEDOWN &&
