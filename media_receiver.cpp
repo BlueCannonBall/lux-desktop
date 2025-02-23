@@ -51,6 +51,18 @@ void MediaReceiver::incoming(rtc::message_vector& messages, const rtc::message_c
                 ssrc = sr.senderSSRC();
                 last_sr_ntp_time = sr.ntpTimestamp();
                 last_sr_time = std::chrono::steady_clock::now();
+
+                if (unsigned int bitrate = requested_bitrate) {
+                    auto message = make_message(rtc::RtcpRemb::SizeWithSSRCs(1), rtc::Message::Control);
+
+                    rtc::RtcpRemb remb;
+                    memcpy(&remb, message->data(), sizeof(rtc::RtcpRemb));
+                    remb.preparePacket(ssrc, 1, bitrate);
+                    remb.setSsrc(0, ssrc);
+                    memcpy(message->data(), &remb, sizeof(rtc::RtcpRemb));
+
+                    send(message);
+                }
             }
             break;
         }
@@ -63,20 +75,10 @@ void MediaReceiver::incoming(rtc::message_vector& messages, const rtc::message_c
 
     std::chrono::steady_clock::time_point current_time;
     if (got_rtp_packets && (current_time = std::chrono::steady_clock::now()) - last_rr_time >= std::chrono::seconds(1)) {
-        auto message = make_message(rtc::RtcpRr::SizeWithReportBlocks(1), rtc::Message::Control);
-
         uint32_t total_packets = last_seq_number + (unsigned int) seq_number_cycles * 65536 - base_seq_number;
         uint32_t last_sr_delay = std::chrono::duration_cast<std::chrono::nanoseconds>(current_time - last_sr_time).count() * 1e-9 * 65536;
 
-        // std::cout << "============= Receiver Report =============" << std::endl;
-        // std::cout << "SSRC:                  " << ssrc << std::endl;
-        // std::cout << "Total packets:         " << total_packets << std::endl;
-        // std::cout << "Packets lost:          " << packets_lost << std::endl;
-        // std::cout << "Last sequence #:       " << last_seq_number << std::endl;
-        // std::cout << "Sequence # cycles:     " << seq_number_cycles << std::endl;
-        // std::cout << "Last SR NTP timestamp: " << last_sr_ntp_time << std::endl;
-        // std::cout << "Last SR delay:         " << last_sr_delay / 65536. << std::endl;
-        // std::cout << "-------------------------------------------" << std::endl;
+        auto message = make_message(rtc::RtcpRr::SizeWithReportBlocks(1), rtc::Message::Control);
 
         rtc::RtcpRr rr;
         memcpy(&rr, message->data(), sizeof(rtc::RtcpRr));
@@ -99,6 +101,7 @@ bool MediaReceiver::requestBitrate(unsigned int bitrate, const rtc::message_call
     remb.setSsrc(0, ssrc);
     memcpy(message->data(), &remb, sizeof(rtc::RtcpRemb));
 
+    requested_bitrate = bitrate;
     send(message);
     return true;
 }

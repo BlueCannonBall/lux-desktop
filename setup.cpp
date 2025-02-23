@@ -69,7 +69,7 @@ SetupWindow::SetupWindow():
 
     {
         auto row = new Fl_Flex(Fl_Flex::ROW);
-        auto label = new Label(0, 0, "Starting bitrate:");
+        auto label = new Label(0, 0, "Bitrate:");
         bitrate_spinner = new Fl_Spinner(0, 0, 0, 0, "");
         bitrate_spinner->type(FL_INT_INPUT);
         bitrate_spinner->minimum(2000);

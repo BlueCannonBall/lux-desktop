@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <rtc/rtc.hpp>
 
@@ -10,11 +11,13 @@ protected:
     uint16_t last_seq_number = 0;
     uint16_t seq_number_cycles = 0;
     uint64_t last_sr_ntp_time = 0;
-    std::chrono::steady_clock::time_point last_sr_time;
 
     bool got_rtp_packets = false;
     uint16_t base_seq_number = 0;
+    std::chrono::steady_clock::time_point last_sr_time;
     std::chrono::steady_clock::time_point last_rr_time = std::chrono::steady_clock::now();
+
+    std::atomic<unsigned int> requested_bitrate = 0;
 
 public:
     void incoming(rtc::message_vector& messages, const rtc::message_callback& send) override;

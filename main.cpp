@@ -41,6 +41,7 @@ int main(int argc, char* argv[]) {
 
     for (;; conn.reset(),
         video_track.reset(),
+        audio_track.reset(),
         ordered_channel.reset(),
         unordered_channel.reset(),
         video_pipeline.reset(),
@@ -60,7 +61,9 @@ int main(int argc, char* argv[]) {
             rtc::Description::Video video("video", rtc::Description::Direction::RecvOnly);
             video.addH264Codec(96);
             video_track = conn->addTrack(video);
+        }
 
+        {
             rtc::Description::Audio audio("audio", rtc::Description::Direction::RecvOnly);
             audio.addOpusCodec(97);
             audio_track = conn->addTrack(audio);
@@ -68,6 +71,10 @@ int main(int argc, char* argv[]) {
 
         video_track->setMediaHandler(std::make_shared<MediaReceiver>());
         audio_track->setMediaHandler(std::make_shared<MediaReceiver>());
+
+        video_track->onOpen([&video_track, bitrate = setup_window.bitrate]() {
+            video_track->requestBitrate(bitrate * 1000);
+        });
 
         if (!view_only) {
             ordered_channel = conn->createDataChannel("ordered-input");
