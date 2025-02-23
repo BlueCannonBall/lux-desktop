@@ -1,23 +1,21 @@
 #include "Polyweb/polyweb.hpp"
-#include "bandwidth.hpp"
 #include "glib.hpp"
 #include "json.hpp"
+#include "media_receiver.hpp"
 #include "setup.hpp"
 #include "video.hpp"
 #include "waiter.hpp"
 #include <FL/Fl.H>
 #include <FL/fl_ask.H>
 #include <SDL2/SDL_main.h>
-#include <chrono>
 #include <gst/app/gstappsink.h>
 #include <gst/gst.h>
 #include <inttypes.h>
-#include <math.h>
 #include <memory>
+#include <mutex>
 #include <rtc/rtc.hpp>
 #include <string.h>
 #include <string>
-#include <thread>
 
 using nlohmann::json;
 
@@ -30,7 +28,6 @@ int main(int argc, char* argv[]) {
 
     bool client_side_mouse;
     bool view_only;
-    BandwidthEstimator bandwidth_estimator;
 
     std::shared_ptr<rtc::PeerConnection> conn;
     std::shared_ptr<rtc::Track> video_track;
@@ -54,7 +51,6 @@ int main(int argc, char* argv[]) {
         }
         client_side_mouse = setup_window.client_side_mouse;
         view_only = setup_window.view_only;
-        bandwidth_estimator = BandwidthEstimator(setup_window.bitrate);
 
         rtc::Configuration config;
         config.iceServers.emplace_back("stun.l.google.com:19302");
@@ -70,8 +66,8 @@ int main(int argc, char* argv[]) {
             audio_track = conn->addTrack(audio);
         }
 
-        video_track->setRtcpHandler(std::make_shared<rtc::RtcpReceivingSession>());
-        audio_track->setRtcpHandler(std::make_shared<rtc::RtcpReceivingSession>());
+        video_track->setMediaHandler(std::make_shared<MediaReceiver>());
+        audio_track->setMediaHandler(std::make_shared<MediaReceiver>());
 
         if (!view_only) {
             ordered_channel = conn->createDataChannel("ordered-input");
@@ -134,16 +130,10 @@ int main(int argc, char* argv[]) {
             GstElement* appsrc = gst_element_factory_make("appsrc", nullptr);
             {
                 GstCaps* caps = gst_caps_new_simple("application/x-rtp", "media", G_TYPE_STRING, "video", "encoding-name", G_TYPE_STRING, "H264", "clock-rate", G_TYPE_INT, 90000, nullptr);
-                g_object_set(appsrc, "caps", caps, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, nullptr);
+                g_object_set(appsrc, "caps", caps, "emit-signals", FALSE, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, nullptr);
                 gst_caps_unref(caps);
             }
-            video_track->onMessage([appsrc, &bandwidth_estimator](rtc::binary message) {
-                if (message.size() >= sizeof(rtc::RtpHeader)) {
-                    rtc::RtpHeader rtp_header;
-                    memcpy(&rtp_header, message.data(), sizeof rtp_header);
-                    bandwidth_estimator.update_video(message.size(), rtp_header.seqNumber());
-                }
-
+            video_track->onMessage([appsrc](rtc::binary message) {
                 if (appsrc) {
                     GstBuffer* buf = gst_buffer_new_and_alloc(message.size());
 
@@ -238,13 +228,7 @@ int main(int argc, char* argv[]) {
                 g_object_set(appsrc, "caps", caps, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, nullptr);
                 gst_caps_unref(caps);
             }
-            audio_track->onMessage([appsrc, &bandwidth_estimator](rtc::binary message) {
-                if (message.size() >= sizeof(rtc::RtpHeader)) {
-                    rtc::RtpHeader rtp_header;
-                    memcpy(&rtp_header, message.data(), sizeof rtp_header);
-                    bandwidth_estimator.update_audio(message.size(), rtp_header.seqNumber());
-                }
-
+            audio_track->onMessage([appsrc](rtc::binary message) {
                 if (appsrc) {
                     GstBuffer* buf = gst_buffer_new_and_alloc(message.size());
 
@@ -303,24 +287,10 @@ int main(int argc, char* argv[]) {
         video.cv.wait(lock);
     }
 
-    Waiter bwe_waiter;
-    std::thread bwe_thread([conn, video_track, unordered_channel, &bandwidth_estimator, &bwe_waiter]() {
-        while (conn->iceState() != rtc::PeerConnection::IceState::Closed &&
-               conn->iceState() != rtc::PeerConnection::IceState::Disconnected &&
-               conn->iceState() != rtc::PeerConnection::IceState::Failed) {
-            if (bwe_waiter.wait_for(std::chrono::milliseconds(500)) == std::cv_status::no_timeout) {
-                break;
-            }
-            video_track->requestBitrate(bandwidth_estimator.estimate(0.5) * 1000);
-        }
-    });
-
     VideoWindow video_window(video, client_side_mouse, view_only);
     video_window.run(conn, ordered_channel, unordered_channel);
 
     conn->close();
-    bwe_waiter.notify_one();
-    bwe_thread.join();
     gst_element_set_state(video_pipeline.get(), GST_STATE_NULL);
     gst_element_set_state(audio_pipeline.get(), GST_STATE_NULL);
     return 0;
