@@ -109,6 +109,9 @@ SetupWindow::SetupWindow():
             if (auto password_it = config_json.find("password"); password_it != config_json.end() && password_it->is_string()) {
                 password_input->value(password_it->get<std::string>().c_str());
             }
+            if (auto bitrate_it = config_json.find("bitrate"); bitrate_it != config_json.end() && bitrate_it->is_number_unsigned()) {
+                bitrate_spinner->value(bitrate_it->get<unsigned int>());
+            }
             if (auto client_side_mouse_it = config_json.find("client_side_mouse"); client_side_mouse_it != config_json.end() && client_side_mouse_it->is_boolean()) {
                 client_side_mouse_check_button->value(client_side_mouse_it->get<bool>());
             }
@@ -145,6 +148,7 @@ void SetupWindow::complete() {
             json config_json = {
                 {"address", address},
                 {"password", password},
+                {"bitrate", bitrate},
                 {"client_side_mouse", client_side_mouse},
                 {"view_only", view_only},
                 {"verify_certs", verify_certs},
