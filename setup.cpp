@@ -100,36 +100,22 @@ SetupWindow::SetupWindow():
 
     auto config_path = get_config_path();
     if (!config_path.empty()) {
-        if (!std::filesystem::exists(config_path)) {
-            std::filesystem::create_directory(config_path);
-        }
-
         std::ifstream config_file(config_path / "config.json");
         if (config_file.is_open()) {
             json config_json = json::parse(config_file);
-
-            json::const_iterator address_it;
-            if ((address_it = config_json.find("address")) != config_json.end() && address_it->is_string()) {
+            if (auto address_it = config_json.find("address"); address_it != config_json.end() && address_it->is_string()) {
                 address_input->value(address_it->get<std::string>().c_str());
             }
-
-            json::const_iterator password_it;
-            if ((password_it = config_json.find("password")) != config_json.end() && password_it->is_string()) {
+            if (auto password_it = config_json.find("password"); password_it != config_json.end() && password_it->is_string()) {
                 password_input->value(password_it->get<std::string>().c_str());
             }
-
-            json::const_iterator client_side_mouse_it;
-            if ((client_side_mouse_it = config_json.find("client_side_mouse")) != config_json.end() && client_side_mouse_it->is_boolean()) {
+            if (auto client_side_mouse_it = config_json.find("client_side_mouse"); client_side_mouse_it != config_json.end() && client_side_mouse_it->is_boolean()) {
                 client_side_mouse_check_button->value(client_side_mouse_it->get<bool>());
             }
-
-            json::const_iterator view_only_it;
-            if ((view_only_it = config_json.find("view_only")) != config_json.end() && view_only_it->is_boolean()) {
+            if (auto view_only_it = config_json.find("view_only"); view_only_it != config_json.end() && view_only_it->is_boolean()) {
                 view_only_check_button->value(view_only_it->get<bool>());
             }
-
-            json::const_iterator verify_certs_it;
-            if ((verify_certs_it = config_json.find("verify_certs")) != config_json.end() && verify_certs_it->is_boolean()) {
+            if (auto verify_certs_it = config_json.find("verify_certs"); verify_certs_it != config_json.end() && verify_certs_it->is_boolean()) {
                 verify_certs_check_button->value(verify_certs_it->get<bool>());
             }
         } else {

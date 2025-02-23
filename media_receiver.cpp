@@ -73,8 +73,7 @@ void MediaReceiver::incoming(rtc::message_vector& messages, const rtc::message_c
     }
     messages.swap(filtered);
 
-    std::chrono::steady_clock::time_point current_time;
-    if (got_rtp_packets && (current_time = std::chrono::steady_clock::now()) - last_rr_time >= std::chrono::seconds(1)) {
+    if (std::chrono::steady_clock::time_point current_time; got_rtp_packets && (current_time = std::chrono::steady_clock::now()) - last_rr_time >= std::chrono::seconds(1)) {
         uint32_t total_packets = last_seq_number + (unsigned int) seq_number_cycles * 65536 - base_seq_number;
         uint32_t last_sr_delay = std::chrono::duration_cast<std::chrono::nanoseconds>(current_time - last_sr_time).count() * 1e-9 * 65536;
 
