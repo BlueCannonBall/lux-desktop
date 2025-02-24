@@ -178,7 +178,7 @@ int main(int argc, char* argv[]) {
             GstElement* avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
             {
                 glib::Object<GstPad> pad = gst_element_get_static_pad(avdec_h264, "src");
-                gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_BOTH, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
+                gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
                     auto video = (Video*) data;
                     GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
                     if (GST_EVENT_TYPE(event) == GST_EVENT_CAPS) {
