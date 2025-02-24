@@ -15,6 +15,8 @@ struct Video {
     std::condition_variable cv;
     int width;
     int height;
+    int y_pitch;
+    int uv_pitch;
     bool resized = false;
     GstSample* sample = nullptr;
 

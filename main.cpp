@@ -10,6 +10,7 @@
 #include <SDL2/SDL_main.h>
 #include <gst/app/gstappsink.h>
 #include <gst/gst.h>
+#include <gst/video/video.h>
 #include <inttypes.h>
 #include <memory>
 #include <mutex>
@@ -158,20 +159,25 @@ int main(int argc, char* argv[]) {
 
             GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
 
-            GstElement* avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
+            GstElement* h264parse = gst_element_factory_make("h264parse", nullptr);
+
+            GstElement* vah264dec = gst_element_factory_make("vah264dec", nullptr);
             {
-                glib::Object<GstPad> pad = gst_element_get_static_pad(avdec_h264, "src");
+                glib::Object<GstPad> pad = gst_element_get_static_pad(vah264dec, "src");
                 gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
                     auto video = (Video*) data;
                     GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
                     if (GST_EVENT_TYPE(event) == GST_EVENT_CAPS) {
+                        GstVideoInfo info;
                         GstCaps* caps;
                         gst_event_parse_caps(event, &caps);
+                        gst_video_info_from_caps(&info, caps);
 
-                        GstStructure* structure = gst_caps_get_structure(caps, 0);
                         video->mutex.lock();
-                        gst_structure_get_int(structure, "width", &video->width);
-                        gst_structure_get_int(structure, "height", &video->height);
+                        video->width = info.width;
+                        video->height = info.height;
+                        video->y_pitch = info.stride[0];
+                        video->uv_pitch = info.stride[1];
                         video->resized = true;
                         video->set_sample(nullptr);
                         video->mutex.unlock();
@@ -183,11 +189,9 @@ int main(int argc, char* argv[]) {
                     nullptr);
             }
 
-            GstElement* videoconvert = gst_element_factory_make("videoconvert", nullptr);
-
             GstElement* appsink = gst_element_factory_make("appsink", nullptr);
             {
-                GstCaps* caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", nullptr);
+                GstCaps* caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "NV12", nullptr);
                 g_object_set(appsink, "caps", caps, nullptr);
                 gst_caps_unref(caps);
 
@@ -212,14 +216,14 @@ int main(int argc, char* argv[]) {
             gst_bin_add_many(GST_BIN(video_pipeline.get()),
                 appsrc,
                 rtph264depay,
-                avdec_h264,
-                videoconvert,
+                h264parse,
+                vah264dec,
                 appsink,
                 nullptr);
             if (!gst_element_link_many(appsrc,
                     rtph264depay,
-                    avdec_h264,
-                    videoconvert,
+                    h264parse,
+                    vah264dec,
                     appsink,
                     nullptr)) {
                 fl_alert("Failed to link GStreamer elements (video pipeline)");
