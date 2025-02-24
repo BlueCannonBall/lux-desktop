@@ -157,6 +157,23 @@ int main(int argc, char* argv[]) {
                 nullptr);
 
             GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
+            g_object_set(rtph264depay, "request-keyframe", TRUE, "wait-for-keyframe", TRUE, nullptr);
+            {
+                glib::Object<GstPad> pad = gst_element_get_static_pad(rtph264depay, "sink");
+                gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_UPSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
+                    auto video_track = (rtc::Track*) data;
+                    GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
+                    if (GST_EVENT_TYPE(event) == GST_EVENT_CUSTOM_UPSTREAM) {
+                        const GstStructure* structure = gst_event_get_structure(event);
+                        if (!strcmp(gst_structure_get_name(structure), "GstForceKeyUnit")) {
+                            video_track->requestKeyframe();
+                        }
+                    }
+                    return GST_PAD_PROBE_OK;
+                },
+                    video_track.get(),
+                    nullptr);
+            }
 
             GstElement* avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
             {
@@ -168,10 +185,10 @@ int main(int argc, char* argv[]) {
                         GstCaps* caps;
                         gst_event_parse_caps(event, &caps);
 
-                        GstStructure* caps_struct = gst_caps_get_structure(caps, 0);
+                        GstStructure* structure = gst_caps_get_structure(caps, 0);
                         video->mutex.lock();
-                        gst_structure_get_int(caps_struct, "width", &video->width);
-                        gst_structure_get_int(caps_struct, "height", &video->height);
+                        gst_structure_get_int(structure, "width", &video->width);
+                        gst_structure_get_int(structure, "height", &video->height);
                         video->resized = true;
                         video->set_sample(nullptr);
                         video->mutex.unlock();
