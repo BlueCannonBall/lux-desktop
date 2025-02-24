@@ -27,7 +27,7 @@ void MediaReceiver::incoming(rtc::message_vector& messages, const rtc::message_c
                         ++seq_number_cycles;
                     }
                 } else {
-                    packets_lost = std::max<int>(packets_lost + ((int) rtp_header.seqNumber() - last_seq_number - 1), 0);
+                    packets_lost += (int) rtp_header.seqNumber() - last_seq_number - 1;
                     last_seq_number = rtp_header.seqNumber();
                 }
             } else {
@@ -75,7 +75,7 @@ void MediaReceiver::incoming(rtc::message_vector& messages, const rtc::message_c
     messages.swap(filtered);
 
     if (std::chrono::steady_clock::time_point current_time; got_rtp_packets && (current_time = std::chrono::steady_clock::now()) - last_rr_time >= std::chrono::seconds(1)) {
-        uint32_t total_packets = last_seq_number + (unsigned int) seq_number_cycles * 65536 - base_seq_number;
+        unsigned int total_packets = last_seq_number + (unsigned int) seq_number_cycles * 65536 - base_seq_number + 1;
         uint32_t last_sr_delay = std::chrono::duration_cast<std::chrono::nanoseconds>(current_time - last_sr_time).count() * 1e-9 * 65536;
 
         auto message = make_message(rtc::RtcpRr::SizeWithReportBlocks(1), rtc::Message::Control);
@@ -83,7 +83,7 @@ void MediaReceiver::incoming(rtc::message_vector& messages, const rtc::message_c
         memcpy(&rr, message->data(), sizeof(rtc::RtcpRr));
         rr.preparePacket(ssrc, 1);
         rr.getReportBlock(0)->preparePacket(ssrc, 0, 0, last_seq_number, seq_number_cycles, 0, last_sr_ntp_time, last_sr_delay);
-        rr.getReportBlock(0)->setPacketsLost((double) (packets_lost - prev_packets_lost) / (total_packets - prev_total_packets) * 255, packets_lost);
+        rr.getReportBlock(0)->setPacketsLost(std::max<int>((double) (packets_lost - prev_packets_lost) / (total_packets - prev_total_packets) * 255, 0), std::max(packets_lost, 0));
         memcpy(message->data(), &rr, sizeof(rtc::RtcpRr));
 
         prev_packets_lost = packets_lost;

@@ -227,21 +227,21 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 SDL_DestroyTexture(texture);
                 texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, video.width, video.height);
                 video.resized = false;
-            } else {
-                GstBuffer* buf = gst_sample_get_buffer(video.sample);
-                GstMapInfo map;
-                gst_buffer_map(buf, &map, GST_MAP_READ);
-
-                void* pixels;
-                int pitch;
-                SDL_LockTexture(texture, nullptr, &pixels, &pitch);
-                memcpy(pixels, map.data, video.width * video.height * 3);
-                SDL_UnlockTexture(texture);
-                dirty = true;
-
-                gst_buffer_unmap(buf, &map);
-                video.set_sample(nullptr);
             }
+
+            GstBuffer* buf = gst_sample_get_buffer(video.sample);
+            GstMapInfo map;
+            gst_buffer_map(buf, &map, GST_MAP_READ);
+
+            void* pixels;
+            int pitch;
+            SDL_LockTexture(texture, nullptr, &pixels, &pitch);
+            memcpy(pixels, map.data, video.width * video.height * 3);
+            SDL_UnlockTexture(texture);
+            dirty = true;
+
+            gst_buffer_unmap(buf, &map);
+            video.set_sample(nullptr);
         }
         video.mutex.unlock();
 
