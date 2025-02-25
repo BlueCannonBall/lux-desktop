@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
 
         json req_json = {
             {"password", setup_window.password},
-            {"show_mouse", !client_side_mouse},
+            {"show_mouse", view_only || !client_side_mouse},
             {"offer", pw::base64_encode(offer.data(), offer.size())},
         };
 
