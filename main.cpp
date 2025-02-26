@@ -160,7 +160,6 @@ int main(int argc, char* argv[]) {
             GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
 
             GstElement* avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
-            g_object_set(avdec_h264, "qos", FALSE, nullptr);
             {
                 glib::Object<GstPad> pad = gst_element_get_static_pad(avdec_h264, "src");
                 gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
