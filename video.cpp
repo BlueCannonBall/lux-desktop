@@ -225,7 +225,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
         if (video.sample) {
             if (video.resized) {
                 SDL_DestroyTexture(texture);
-                texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_NV12, SDL_TEXTUREACCESS_STREAMING, video.width, video.height);
+                texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, video.width, video.height);
                 video.resized = false;
             }
 
@@ -236,20 +236,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             void* pixels;
             int pitch;
             SDL_LockTexture(texture, nullptr, &pixels, &pitch);
-            {
-                auto src = (char*) map.data;
-                auto dest = (char*) pixels;
-                for (int y = 0; y < video.height; ++y) {
-                    memcpy(dest, src, video.width);
-                    src += video.y_pitch;
-                    dest += pitch;
-                }
-                for (int y = 0; y < video.height / 2; ++y) {
-                    memcpy(dest, src, video.width);
-                    src += video.uv_pitch;
-                    dest += pitch;
-                }
-            }
+            memcpy(pixels, map.data, video.width * video.height * 3);
             SDL_UnlockTexture(texture);
             dirty = true;
 

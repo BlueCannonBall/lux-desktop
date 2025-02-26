@@ -159,11 +159,10 @@ int main(int argc, char* argv[]) {
 
             GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
 
-            GstElement* h264parse = gst_element_factory_make("h264parse", nullptr);
-
-            GstElement* vah264dec = gst_element_factory_make("vah264dec", nullptr);
+            GstElement* avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
+            g_object_set(avdec_h264, "qos", FALSE, nullptr);
             {
-                glib::Object<GstPad> pad = gst_element_get_static_pad(vah264dec, "src");
+                glib::Object<GstPad> pad = gst_element_get_static_pad(avdec_h264, "src");
                 gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
                     auto video = (Video*) data;
                     GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
@@ -176,8 +175,6 @@ int main(int argc, char* argv[]) {
                         video->mutex.lock();
                         video->width = info.width;
                         video->height = info.height;
-                        video->y_pitch = info.stride[0];
-                        video->uv_pitch = info.stride[1];
                         video->resized = true;
                         video->set_sample(nullptr);
                         video->mutex.unlock();
@@ -189,9 +186,11 @@ int main(int argc, char* argv[]) {
                     nullptr);
             }
 
+            GstElement* videoconvert = gst_element_factory_make("videoconvert", nullptr);
+
             GstElement* appsink = gst_element_factory_make("appsink", nullptr);
             {
-                GstCaps* caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "NV12", nullptr);
+                GstCaps* caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", nullptr);
                 g_object_set(appsink, "caps", caps, nullptr);
                 gst_caps_unref(caps);
 
@@ -216,14 +215,15 @@ int main(int argc, char* argv[]) {
             gst_bin_add_many(GST_BIN(video_pipeline.get()),
                 appsrc,
                 rtph264depay,
-                h264parse,
-                vah264dec,
+                avdec_h264,
+                videoconvert,
                 appsink,
                 nullptr);
-            if (!gst_element_link_many(appsrc,
+            if (!gst_element_link_many(
+                    appsrc,
                     rtph264depay,
-                    h264parse,
-                    vah264dec,
+                    avdec_h264,
+                    videoconvert,
                     appsink,
                     nullptr)) {
                 fl_alert("Failed to link GStreamer elements (video pipeline)");
