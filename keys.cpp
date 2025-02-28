@@ -104,7 +104,7 @@ std::string_view sdl_to_browser_key(SDL_Keycode key) {
     case SDLK_PAUSE: return "Pause";
     // case SDLK_VOLUMEUP: return "AudioVolumeUp";
     // case SDLK_VOLUMEDOWN: return "AudioVolumeDown";
-    case SDLK_MUTE: return "AudioVolumeMute";
+    // case SDLK_MUTE: return "AudioVolumeMute";
     case SDLK_KP_EQUALS: return "NumpadEqual";
     case SDLK_KP_COMMA: return "NumpadComma";
     case SDLK_KP_LEFTPAREN: return "NumpadParenLeft";
