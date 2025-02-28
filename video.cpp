@@ -113,10 +113,6 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                         !event.key.repeat &&
                         event.key.keysym.sym != SDLK_F9 &&
                         event.key.keysym.sym != SDLK_F11 &&
-                        event.key.keysym.sym != SDLK_BRIGHTNESSDOWN &&
-                        event.key.keysym.sym != SDLK_BRIGHTNESSUP &&
-                        event.key.keysym.sym != SDLK_VOLUMEDOWN &&
-                        event.key.keysym.sym != SDLK_VOLUMEUP &&
                         ordered_channel->isOpen()) {
                         json message = {
                             {"type", "keydown"},
@@ -140,11 +136,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                                 if (!client_side_mouse) {
                                     SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() ? SDL_FALSE : SDL_TRUE);
                                 }
-                            } else if (event.key.keysym.sym != SDLK_BRIGHTNESSDOWN &&
-                                       event.key.keysym.sym != SDLK_BRIGHTNESSUP &&
-                                       event.key.keysym.sym != SDLK_VOLUMEDOWN &&
-                                       event.key.keysym.sym != SDLK_VOLUMEUP &&
-                                       ordered_channel->isOpen()) {
+                            } else if (ordered_channel->isOpen()) {
                                 json message = {
                                     {"type", "keyup"},
                                     {"key", sdl_to_browser_key(event.key.keysym.sym)},
