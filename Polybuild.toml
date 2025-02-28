@@ -10,14 +10,13 @@ compilation-flags = "-Wall -std=c++17 -O3 -march=native -mtune=native -pthread"
 libraries = ["fltk", "SDL2main", "SDL2", "ssl", "crypto"]
 static-libraries = [
 	"libdatachannel/build/libdatachannel-static.a",
-	"libdatachannel/build/deps/libjuice/libjuice-static.a",
 	"libdatachannel/build/deps/libsrtp/libsrtp2.a",
 	"libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a",
 ]
-pkg-config-libraries = ["gstreamer-video-1.0", "gstreamer-app-1.0", "gstreamer-1.0"]
+pkg-config-libraries = ["gstreamer-video-1.0", "gstreamer-app-1.0", "gstreamer-1.0", "nice"]
 preludes = ["""\
 	cd libdatachannel && \
-	cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release && \
+	cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 && \
 	cd build && \
 	$(MAKE) datachannel datachannel-static \
 """]

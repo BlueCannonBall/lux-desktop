@@ -11,13 +11,13 @@ ifeq ($(OS),Windows_NT)
 endif
 
 compiler := $(CXX)
-compilation_flags := -Wall -std=c++17 -O3 -march=native -mtune=native -pthread -Ilibdatachannel/include `pkg-config --cflags gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0`
-libraries := -lfltk -lSDL2main -lSDL2 -lssl -lcrypto `pkg-config --libs gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0`
-static_libraries := libdatachannel/build/libdatachannel-static.a libdatachannel/build/deps/libjuice/libjuice-static.a libdatachannel/build/deps/libsrtp/libsrtp2.a libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a
+compilation_flags := -Wall -std=c++17 -O3 -march=native -mtune=native -pthread -Ilibdatachannel/include `pkg-config --cflags gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0 nice`
+libraries := -lfltk -lSDL2main -lSDL2 -lssl -lcrypto `pkg-config --libs gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0 nice`
+static_libraries := libdatachannel/build/libdatachannel-static.a libdatachannel/build/deps/libsrtp/libsrtp2.a libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a
 
 ifeq ($(OS),Windows_NT)
-	compilation_flags := -Wall -std=c++17 -O3 -march=native -mtune=native -pthread -static-libgcc -static-libstdc++ -mwindows -Ilibdatachannel/include -Llibdatachannel/build `pkg-config --cflags gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0`
-	libraries := -lfltk -lSDL2main -lSDL2 -ldatachannel -lssl -lcrypto -lws2_32 -lcomctl32 -lole32 -luuid `pkg-config --libs gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0`
+	compilation_flags := -Wall -std=c++17 -O3 -march=native -mtune=native -pthread -static-libgcc -static-libstdc++ -mwindows -Ilibdatachannel/include -Llibdatachannel/build `pkg-config --cflags gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0 nice`
+	libraries := -lfltk -lSDL2main -lSDL2 -ldatachannel -lssl -lcrypto -lws2_32 -lcomctl32 -lole32 -luuid `pkg-config --libs gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0 nice`
 	static_libraries :=
 endif
 
@@ -104,8 +104,8 @@ obj/FL_Flex_0$(obj_ext): FL_Flex/FL_Flex.cpp FL_Flex/FL_Flex.H
 
 lux-desktop$(out_ext): obj/media_receiver_0$(obj_ext) obj/main_0$(obj_ext) obj/video_0$(obj_ext) obj/keys_0$(obj_ext) obj/setup_0$(obj_ext) obj/string_0$(obj_ext) obj/client_0$(obj_ext) obj/polyweb_0$(obj_ext) obj/websocket_0$(obj_ext) obj/server_0$(obj_ext) obj/polynet_0$(obj_ext) obj/secure_sockets_0$(obj_ext) obj/FL_Flex_0$(obj_ext)
 	@printf '\033[1m[POLYBUILD]\033[0m Building $@...\n'
-	@printf '\033[1m[POLYBUILD]\033[0m Executing prelude: cd libdatachannel && cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release && cd build && $(MAKE) datachannel datachannel-static \n'
-	@cd libdatachannel && cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release && cd build && $(MAKE) datachannel datachannel-static 
+	@printf '\033[1m[POLYBUILD]\033[0m Executing prelude: cd libdatachannel && cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 && cd build && $(MAKE) datachannel datachannel-static \n'
+	@cd libdatachannel && cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 && cd build && $(MAKE) datachannel datachannel-static 
 	@$(compiler) $^ $(static_libraries) $(compilation_flags) $(libraries) -o $@
 	@printf '\033[1m[POLYBUILD]\033[0m Finished building $@!\n'
 
