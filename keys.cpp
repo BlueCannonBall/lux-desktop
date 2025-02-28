@@ -102,8 +102,8 @@ std::string_view sdl_to_browser_key(SDL_Keycode key) {
     case SDLK_INSERT: return "Insert";
     case SDLK_DELETE: return "Delete";
     case SDLK_PAUSE: return "Pause";
-    case SDLK_VOLUMEUP: return "AudioVolumeUp";
-    case SDLK_VOLUMEDOWN: return "AudioVolumeDown";
+    // case SDLK_VOLUMEUP: return "AudioVolumeUp";
+    // case SDLK_VOLUMEDOWN: return "AudioVolumeDown";
     case SDLK_MUTE: return "AudioVolumeMute";
     case SDLK_KP_EQUALS: return "NumpadEqual";
     case SDLK_KP_COMMA: return "NumpadComma";
@@ -147,8 +147,8 @@ std::string_view sdl_to_browser_key(SDL_Keycode key) {
     case SDLK_AC_STOP: return "BrowserStop";
     case SDLK_AC_REFRESH: return "BrowserRefresh";
     case SDLK_AC_BOOKMARKS: return "BrowserFavorites";
-    case SDLK_BRIGHTNESSDOWN: return "BrightnessDown";
-    case SDLK_BRIGHTNESSUP: return "BrightnessUp";
+    // case SDLK_BRIGHTNESSDOWN: return "BrightnessDown";
+    // case SDLK_BRIGHTNESSUP: return "BrightnessUp";
     case SDLK_DISPLAYSWITCH: return "DisplaySwitch";
     case SDLK_KBDILLUMTOGGLE: return "KeyboardIlluminationToggle";
     case SDLK_KBDILLUMDOWN: return "KeyboardIlluminationDown";
