@@ -1,7 +1,9 @@
 #include "video.hpp"
+#include "glib.hpp"
 #include "json.hpp"
 #include "keys.hpp"
 #include <FL/fl_ask.H>
+#include <gio/gio.h>
 #include <iostream>
 #include <math.h>
 #include <stdlib.h>
@@ -10,6 +12,19 @@
 using nlohmann::json;
 
 Uint32 VIDEO_FRAME_EVENT = SDL_RegisterEvents(1);
+
+bool is_dark_mode() {
+    bool ret;
+#ifdef _WIN32
+    ret = true;
+#else
+    glib::Object<GSettings> settings = g_settings_new("org.gnome.desktop.interface");
+    char* theme = g_settings_get_string(settings.get(), "color-scheme");
+    ret = strcmp(theme, "default") && strcmp(theme, "prefer-light");
+    g_free(theme);
+#endif
+    return ret;
+}
 
 void VideoWindow::set_keyboard_grab(bool grabbed) {
     if (grabbed) {
@@ -71,6 +86,12 @@ void VideoWindow::window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) 
 }
 
 void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
+    if (is_dark_mode()) {
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+    } else {
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+    }
+
     SDL_Texture* texture = nullptr;
     for (bool running = true, dirty = false; running;) {
         if (conn->iceState() == rtc::PeerConnection::IceState::Closed ||

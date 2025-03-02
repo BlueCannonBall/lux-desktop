@@ -8,7 +8,7 @@
 
 namespace glib {
     template <typename... Args, typename T, typename F>
-    gulong connect_signal(T* object, const std::string& signal_name, F&& handler) {
+    unsigned long connect_signal(T* object, const std::string& signal_name, F&& handler) {
         GClosure* closure = g_cclosure_new(
             G_CALLBACK(+[](T* object, Args... args, F* handler) {
                 return (*handler)(object, args...);
@@ -60,7 +60,7 @@ namespace glib {
         }
 
         template <typename... Args, typename F>
-        gulong connect_signal(const std::string& signal_name, F&& handler) {
+        unsigned long connect_signal(const std::string& signal_name, F&& handler) {
             return glib::connect_signal<Args...>(object, signal_name, std::forward<F>(handler));
         }
 
