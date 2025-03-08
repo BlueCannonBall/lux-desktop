@@ -43,11 +43,7 @@ void MediaReceiver::incoming(rtc::message_vector& messages, const rtc::message_c
         case rtc::Message::Control: {
             rtc::RtcpHeader rtcp_header;
             memcpy(&rtcp_header, message->data(), sizeof(rtc::RtcpHeader));
-            if (rtcp_header.payloadType() == 201) {
-                rtc::RtcpRr rr;
-                memcpy(&rr, message->data(), sizeof(rtc::RtcpRr));
-                ssrc = rr.senderSSRC();
-            } else if (rtcp_header.payloadType() == 200) {
+            if (rtcp_header.payloadType() == 200) {
                 rtc::RtcpSr sr;
                 memcpy(&sr, message->data(), sizeof(rtc::RtcpSr));
                 ssrc = sr.senderSSRC();
@@ -64,6 +60,10 @@ void MediaReceiver::incoming(rtc::message_vector& messages, const rtc::message_c
 
                     send(message);
                 }
+            } else if (rtcp_header.payloadType() == 201) {
+                rtc::RtcpRr rr;
+                memcpy(&rr, message->data(), sizeof(rtc::RtcpRr));
+                ssrc = rr.senderSSRC();
             }
             break;
         }
