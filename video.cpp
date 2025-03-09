@@ -132,11 +132,33 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                         break;
 
                     case SDL_WINDOWEVENT_FOCUS_LOST:
-                        if (!view_only) set_keyboard_grab(false);
+                        if (is_kde()) {
+                            if (is_dark_mode()) {
+                                SDL_SetRenderDrawColor(renderer, 42, 46, 50, SDL_ALPHA_OPAQUE);
+                            } else {
+                                SDL_SetRenderDrawColor(renderer, 239, 240, 241, SDL_ALPHA_OPAQUE);
+                            }
+                        }
+
+                        if (!view_only) {
+                            set_keyboard_grab(false);
+                        }
+
                         break;
 
                     case SDL_WINDOWEVENT_FOCUS_GAINED:
-                        if (!view_only) set_keyboard_grab(true);
+                        if (is_kde()) {
+                            if (is_dark_mode()) {
+                                SDL_SetRenderDrawColor(renderer, 49, 54, 59, SDL_ALPHA_OPAQUE);
+                            } else {
+                                SDL_SetRenderDrawColor(renderer, 222, 224, 226, SDL_ALPHA_OPAQUE);
+                            }
+                        }
+
+                        if (!view_only) {
+                            set_keyboard_grab(true);
+                        }
+
                         break;
                     }
                     break;
