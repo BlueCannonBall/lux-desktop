@@ -131,7 +131,6 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
 
                 case SDL_KEYDOWN:
                     if (!view_only &&
-                        !event.key.repeat &&
                         event.key.keysym.sym != SDLK_F9 &&
                         event.key.keysym.sym != SDLK_F11 &&
                         ordered_channel->isOpen()) {
@@ -144,26 +143,24 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                     break;
 
                 case SDL_KEYUP:
-                    if (!event.key.repeat) {
-                        if (event.key.keysym.sym == SDLK_F11) {
-                            Uint32 flags = SDL_GetWindowFlags(window);
-                            if (flags & SDL_WINDOW_FULLSCREEN) {
-                                SDL_SetWindowFullscreen(window, 0);
-                            } else {
-                                SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+                    if (event.key.keysym.sym == SDLK_F11) {
+                        Uint32 flags = SDL_GetWindowFlags(window);
+                        if (flags & SDL_WINDOW_FULLSCREEN) {
+                            SDL_SetWindowFullscreen(window, 0);
+                        } else {
+                            SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+                        }
+                    } else if (!view_only) {
+                        if (event.key.keysym.sym == SDLK_F9) {
+                            if (!client_side_mouse) {
+                                SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() ? SDL_FALSE : SDL_TRUE);
                             }
-                        } else if (!view_only) {
-                            if (event.key.keysym.sym == SDLK_F9) {
-                                if (!client_side_mouse) {
-                                    SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() ? SDL_FALSE : SDL_TRUE);
-                                }
-                            } else if (ordered_channel->isOpen()) {
-                                json message = {
-                                    {"type", "keyup"},
-                                    {"key", sdl_to_browser_key(event.key.keysym.sym)},
-                                };
-                                ordered_channel->send(message.dump());
-                            }
+                        } else if (ordered_channel->isOpen()) {
+                            json message = {
+                                {"type", "keyup"},
+                                {"key", sdl_to_browser_key(event.key.keysym.sym)},
+                            };
+                            ordered_channel->send(message.dump());
                         }
                     }
                     break;
