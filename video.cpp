@@ -14,27 +14,31 @@ using nlohmann::json;
 Uint32 VIDEO_FRAME_EVENT = SDL_RegisterEvents(1);
 
 bool is_dark_mode() {
-    bool ret;
-#ifdef _WIN32
-    ret = true;
-#else
     glib::Object<GSettings> settings = g_settings_new("org.gnome.desktop.interface");
     char* theme = g_settings_get_string(settings.get(), "color-scheme");
-    ret = strcmp(theme, "default") && strcmp(theme, "prefer-light");
+    bool ret = strcmp(theme, "default") && strcmp(theme, "prefer-light");
     g_free(theme);
-#endif
     return ret;
+}
+
+bool is_kde() {
+#if !defined(_WIN32) && !defined(__APPLE__)
+    char* xdg_current_desktop;
+    return (xdg_current_desktop = getenv("XDG_CURRENT_DESKTOP")) && !strcmp(xdg_current_desktop, "KDE");
+#else
+    return false;
+#endif
 }
 
 void VideoWindow::set_keyboard_grab(bool grabbed) {
     if (grabbed) {
-        if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
-            std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+        if (is_kde() && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
+            std::cerr << "Warning: Qt D-Bus call failed (ignore unless on KDE)" << std::endl;
         }
         SDL_SetWindowKeyboardGrab(window, SDL_TRUE);
     } else {
-        if (system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
-            std::cerr << "Warning: Qt D-Bus call failed" << std::endl;
+        if (is_kde() && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
+            std::cerr << "Warning: Qt D-Bus call failed (ignore unless on KDE)" << std::endl;
         }
         SDL_SetWindowKeyboardGrab(window, SDL_FALSE);
     }
@@ -87,9 +91,17 @@ void VideoWindow::window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) 
 
 void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
     if (is_dark_mode()) {
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+        if (is_kde()) {
+            SDL_SetRenderDrawColor(renderer, 49, 54, 59, SDL_ALPHA_OPAQUE);
+        } else {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+        }
     } else {
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+        if (is_kde()) {
+            SDL_SetRenderDrawColor(renderer, 222, 224, 226, SDL_ALPHA_OPAQUE);
+        } else {
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+        }
     }
 
     SDL_Texture* texture = nullptr;
