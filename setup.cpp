@@ -35,6 +35,10 @@ std::filesystem::path SetupWindow::get_config_path() {
     if (char* appdata = getenv("APPDATA")) {
         ret = std::filesystem::path(appdata) / "lux-desktop";
     }
+#elif defined(__APPLE__)
+    if (char* home = getenv("HOME")) {
+        ret = std::filesystem::path(home) / "Library" / "Application Support" / "lux-desktop";
+    }
 #else
     if (char* xdg_config_home = getenv("XDG_CONFIG_HOME")) {
         ret = std::filesystem::path(xdg_config_home) / "lux-desktop";
