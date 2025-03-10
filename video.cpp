@@ -21,6 +21,14 @@ bool is_dark_mode() {
     return ret;
 }
 
+std::string get_gtk_theme() {
+    glib::Object<GSettings> settings = g_settings_new("org.gnome.desktop.interface");
+    char* theme = g_settings_get_string(settings.get(), "gtk-theme");
+    std::string ret = theme;
+    g_free(theme);
+    return ret;
+}
+
 bool is_kde() {
 #if !defined(_WIN32) && !defined(__APPLE__)
     char* xdg_current_desktop;
@@ -91,13 +99,13 @@ void VideoWindow::window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) 
 
 void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
     if (is_dark_mode()) {
-        if (is_kde()) {
+        if (get_gtk_theme() == "Breeze") {
             SDL_SetRenderDrawColor(renderer, 49, 54, 59, SDL_ALPHA_OPAQUE);
         } else {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         }
     } else {
-        if (is_kde()) {
+        if (get_gtk_theme() == "Breeze") {
             SDL_SetRenderDrawColor(renderer, 222, 224, 226, SDL_ALPHA_OPAQUE);
         } else {
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
@@ -132,7 +140,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                         break;
 
                     case SDL_WINDOWEVENT_FOCUS_LOST:
-                        if (is_kde()) {
+                        if (get_gtk_theme() == "Breeze") {
                             if (is_dark_mode()) {
                                 SDL_SetRenderDrawColor(renderer, 42, 46, 50, SDL_ALPHA_OPAQUE);
                             } else {
@@ -147,7 +155,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                         break;
 
                     case SDL_WINDOWEVENT_FOCUS_GAINED:
-                        if (is_kde()) {
+                        if (get_gtk_theme() == "Breeze") {
                             if (is_dark_mode()) {
                                 SDL_SetRenderDrawColor(renderer, 49, 54, 59, SDL_ALPHA_OPAQUE);
                             } else {
