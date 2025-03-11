@@ -8,6 +8,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 
 using nlohmann::json;
 
