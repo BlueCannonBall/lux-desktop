@@ -55,7 +55,7 @@ public:
         SDL_Init(SDL_INIT_VIDEO);
 
         SDL_SetHint(SDL_HINT_APP_NAME, "Lux Client");
-        SDL_SetHint(SDL_HINT_SCREENSAVER_INHIBIT_ACTIVITY_NAME, "Lux Client");
+        SDL_SetHint(SDL_HINT_SCREENSAVER_INHIBIT_ACTIVITY_NAME, "Watching a video");
         SDL_SetHint(SDL_HINT_ALLOW_ALT_TAB_WHILE_GRABBED, "0");
         SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
