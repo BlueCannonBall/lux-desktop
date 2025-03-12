@@ -3,14 +3,14 @@
 #include "FL_Flex/FL_Flex.H"
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Check_Button.H>
+#include <FL/Fl_Double_Window.H>
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Secret_Input.H>
 #include <FL/Fl_Spinner.H>
-#include <FL/Fl_Window.H>
 #include <filesystem>
 #include <string>
 
-class SetupWindow : public Fl_Window {
+class SetupWindow : public Fl_Double_Window {
 public:
     std::string address;
     std::string password;
