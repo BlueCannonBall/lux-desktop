@@ -114,7 +114,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
     }
 
     SDL_Texture* texture = nullptr;
-    for (bool running = true, dirty = false; running;) {
+    for (bool running = true, dirty = true; running;) {
         if (conn->iceState() == rtc::PeerConnection::IceState::Closed ||
             conn->iceState() == rtc::PeerConnection::IceState::Disconnected ||
             conn->iceState() == rtc::PeerConnection::IceState::Failed) {
@@ -304,7 +304,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             SDL_Rect dest;
             letterbox(dest.x, dest.y, dest.w, dest.h);
             SDL_RenderClear(renderer);
-            SDL_RenderCopy(renderer, texture, nullptr, &dest);
+            if (texture) SDL_RenderCopy(renderer, texture, nullptr, &dest);
             SDL_RenderPresent(renderer);
             dirty = false;
         }
