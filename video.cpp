@@ -147,6 +147,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                             } else {
                                 SDL_SetRenderDrawColor(renderer, 239, 240, 241, SDL_ALPHA_OPAQUE);
                             }
+                            dirty = true;
                         }
 
                         if (!view_only) {
@@ -162,6 +163,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                             } else {
                                 SDL_SetRenderDrawColor(renderer, 222, 224, 226, SDL_ALPHA_OPAQUE);
                             }
+                            dirty = true;
                         }
 
                         if (!view_only) {
