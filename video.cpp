@@ -78,7 +78,7 @@ void VideoWindow::letterbox(int& x, int& y, int& width, int& height) const {
     }
 }
 
-void VideoWindow::window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) const {
+void VideoWindow::position_in_video(int x, int y, int& x_ret, int& y_ret) const {
     int window_width;
     int window_height;
     SDL_GetWindowSize(window, &window_width, &window_height);
@@ -216,7 +216,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                             if (ordered_channel->isOpen()) {
                                 int x;
                                 int y;
-                                window_pos_to_video_pos(event.motion.x, event.motion.y, x, y);
+                                position_in_video(event.motion.x, event.motion.y, x, y);
 
                                 json message = {
                                     {"type", "mousemoveabs"},

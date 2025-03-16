@@ -84,6 +84,6 @@ public:
     }
 
     void letterbox(int& x, int& y, int& width, int& height) const;
-    void window_pos_to_video_pos(int x, int y, int& x_ret, int& y_ret) const;
+    void position_in_video(int x, int y, int& x_ret, int& y_ret) const;
     void run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::DataChannel> ordered_channel = nullptr, std::shared_ptr<rtc::DataChannel> unordered_channel = nullptr);
 };
