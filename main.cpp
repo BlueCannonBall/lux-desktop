@@ -194,8 +194,6 @@ int main(int argc, char* argv[]) {
                 g_object_set(appsink, "caps", caps, nullptr);
                 gst_caps_unref(caps);
 
-		g_object_set(appsink, "drop", TRUE, "max-buffers", 1, nullptr);
-
                 GstAppSinkCallbacks callbacks = {
                     .new_sample = [](GstAppSink* appsink, void* data) {
                         auto video = (Video*) data;
