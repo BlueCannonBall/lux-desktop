@@ -186,9 +186,6 @@ int main(int argc, char* argv[]) {
                     nullptr);
             }
 
-            GstElement* queue = gst_element_factory_make("queue", nullptr);
-            g_object_set(queue, "max-size-buffers", 1, "max-size-time", 0, "max-size-bytes", 0, "leaky", 2, nullptr);
-
             GstElement* videoconvert = gst_element_factory_make("videoconvert", nullptr);
 
             GstElement* appsink = gst_element_factory_make("appsink", nullptr);
@@ -219,7 +216,6 @@ int main(int argc, char* argv[]) {
                 appsrc,
                 rtph264depay,
                 avdec_h264,
-                queue,
                 videoconvert,
                 appsink,
                 nullptr);
@@ -227,7 +223,6 @@ int main(int argc, char* argv[]) {
                     appsrc,
                     rtph264depay,
                     avdec_h264,
-                    queue,
                     videoconvert,
                     appsink,
                     nullptr)) {
