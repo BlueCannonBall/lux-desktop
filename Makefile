@@ -104,8 +104,8 @@ obj/FL_Flex_0$(obj_ext): FL_Flex/FL_Flex.cpp FL_Flex/FL_Flex.H
 
 lux-desktop$(out_ext): obj/keys_0$(obj_ext) obj/main_0$(obj_ext) obj/media_receiver_0$(obj_ext) obj/setup_0$(obj_ext) obj/video_0$(obj_ext) obj/client_0$(obj_ext) obj/polyweb_0$(obj_ext) obj/server_0$(obj_ext) obj/string_0$(obj_ext) obj/websocket_0$(obj_ext) obj/polynet_0$(obj_ext) obj/secure_sockets_0$(obj_ext) obj/FL_Flex_0$(obj_ext)
 	@printf '\033[1m[POLYBUILD]\033[0m Building $@...\n'
-	@printf '\033[1m[POLYBUILD]\033[0m Executing prelude: cd libdatachannel && cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && cd build && $(MAKE) datachannel datachannel-static \n'
-	@cd libdatachannel && cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && cd build && $(MAKE) datachannel datachannel-static 
+	@printf '\033[1m[POLYBUILD]\033[0m Executing prelude:  cd libdatachannel && cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 && cd build && $(MAKE) datachannel datachannel-static \n'
+	@ cd libdatachannel && cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 && cd build && $(MAKE) datachannel datachannel-static 
 	@$(compiler) $^ $(static_libraries) $(compilation_flags) $(libraries) -o $@
 	@printf '\033[1m[POLYBUILD]\033[0m Finished building $@!\n'
 
