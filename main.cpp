@@ -12,6 +12,7 @@
 #include <gst/gst.h>
 #include <gst/video/video.h>
 #include <inttypes.h>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <rtc/rtc.hpp>
