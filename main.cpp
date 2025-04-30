@@ -18,10 +18,23 @@
 #include <rtc/rtc.hpp>
 #include <string.h>
 #include <string>
+#ifdef _WIN32
+    #include <windows.h>
+#endif
 
 using nlohmann::json;
 
 int main(int argc, char* argv[]) {
+#ifdef _WIN32
+    if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+        FILE* fp;
+        freopen_s(&fp, "CONOUT$", "w", stdout);
+        freopen_s(&fp, "CONOUT$", "w", stderr);
+        freopen_s(&fp, "CONIN$", "r", stdin);
+        std::ios::sync_with_stdio();
+    }
+#endif
+
     Fl::visual(FL_DOUBLE | FL_INDEX);
     Fl::scheme("gtk+");
     rtc::InitLogger(rtc::LogLevel::Warning);
@@ -166,33 +179,42 @@ int main(int argc, char* argv[]) {
 
             GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
 
-            GstElement* avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
-            {
-                glib::Object<GstPad> pad = gst_element_get_static_pad(avdec_h264, "src");
-                gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
-                    auto video = (Video*) data;
-                    GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
-                    if (GST_EVENT_TYPE(event) == GST_EVENT_CAPS) {
-                        GstVideoInfo info;
-                        GstCaps* caps;
-                        gst_event_parse_caps(event, &caps);
-                        gst_video_info_from_caps(&info, caps);
+#ifdef _WIN32
+            GstElement* h264parse = gst_element_factory_make("h264parse", nullptr);
 
-                        video->mutex.lock();
-                        video->width = info.width;
-                        video->height = info.height;
-                        video->resized = true;
-                        video->set_sample(nullptr);
-                        video->mutex.unlock();
-                        video->cv.notify_one();
-                    }
-                    return GST_PAD_PROBE_OK;
-                },
-                    &video,
-                    nullptr);
-            }
+            GstElement* h264enc = gst_element_factory_make("d3d11h264dec", nullptr);
+
+            GstElement* videoconvert = gst_element_factory_make("d3d11convert", nullptr);
+
+            GstElement* d3d11download = gst_element_factory_make("d3d11download", nullptr);
+#else
+            GstElement* h264enc = gst_element_factory_make("avdec_h264", nullptr);
 
             GstElement* videoconvert = gst_element_factory_make("videoconvert", nullptr);
+#endif
+
+            glib::Object<GstPad> h264enc_src_pad = gst_element_get_static_pad(h264enc, "src");
+            gst_pad_add_probe(h264enc_src_pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
+                auto video = (Video*) data;
+                GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
+                if (GST_EVENT_TYPE(event) == GST_EVENT_CAPS) {
+                    GstVideoInfo info;
+                    GstCaps* caps;
+                    gst_event_parse_caps(event, &caps);
+                    gst_video_info_from_caps(&info, caps);
+
+                    video->mutex.lock();
+                    video->width = info.width;
+                    video->height = info.height;
+                    video->resized = true;
+                    video->set_sample(nullptr);
+                    video->mutex.unlock();
+                    video->cv.notify_one();
+                }
+                return GST_PAD_PROBE_OK;
+            },
+                &video,
+                nullptr);
 
             GstElement* appsink = gst_element_factory_make("appsink", nullptr);
             {
@@ -221,15 +243,29 @@ int main(int argc, char* argv[]) {
             gst_bin_add_many(GST_BIN(video_pipeline.get()),
                 appsrc,
                 rtph264depay,
-                avdec_h264,
+#ifdef _WIN32
+                h264parse,
+                h264enc,
                 videoconvert,
+                d3d11download,
+#else
+                h264enc,
+                videoconvert,
+#endif
                 appsink,
                 nullptr);
             if (!gst_element_link_many(
                     appsrc,
                     rtph264depay,
-                    avdec_h264,
+#ifdef _WIN32
+                    h264parse,
+                    h264enc,
                     videoconvert,
+                    d3d11download,
+#else
+                    h264enc,
+                    videoconvert,
+#endif
                     appsink,
                     nullptr)) {
                 fl_alert("Failed to link GStreamer elements (video pipeline)");
