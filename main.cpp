@@ -16,10 +16,10 @@
 #include <memory>
 #include <mutex>
 #include <rtc/rtc.hpp>
-#include <stdio.h>
 #include <string.h>
 #include <string>
 #ifdef _WIN32
+    #include <stdio.h>
     #include <windows.h>
 #endif
 
