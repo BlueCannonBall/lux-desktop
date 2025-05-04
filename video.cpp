@@ -58,16 +58,16 @@ void VideoWindow::letterbox(int& x, int& y, int& width, int& height) const {
     int window_height;
     SDL_GetWindowSize(window, &window_width, &window_height);
 
-    float video_aspect_ratio = (float) video.width / video.height;
-    float window_aspect_ratio = (float) window_width / window_height;
+    double video_aspect_ratio = (double) video.width / video.height;
+    double window_aspect_ratio = (double) window_width / window_height;
     if (video_aspect_ratio > window_aspect_ratio) {
         x = 0;
         width = window_width;
-        height = ((float) window_width / video.width) * video.height;
+        height = ((double) window_width / video.width) * video.height;
         y = (window_height - height) / 2;
     } else if (video_aspect_ratio < window_aspect_ratio) {
         y = 0;
-        width = ((float) window_height / video.height) * video.width;
+        width = ((double) window_height / video.height) * video.width;
         height = window_height;
         x = (window_width - width) / 2;
     } else {
