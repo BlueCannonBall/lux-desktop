@@ -220,7 +220,7 @@ int main(int argc, char* argv[]) {
             GstElement* appsink = gst_element_factory_make("appsink", nullptr);
             {
                 GstCaps* caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", nullptr);
-                g_object_set(appsink, "caps", caps, nullptr);
+                g_object_set(appsink, "caps", caps, "emit-signals", FALSE, "drop", TRUE, "sync", FALSE, "max-buffers", 1, nullptr);
                 gst_caps_unref(caps);
 
                 GstAppSinkCallbacks callbacks = {
