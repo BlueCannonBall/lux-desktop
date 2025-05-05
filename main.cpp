@@ -190,6 +190,7 @@ int main(int argc, char* argv[]) {
             GstElement* d3d11download = gst_element_factory_make("d3d11download", nullptr);
 #else
             GstElement* h264enc = gst_element_factory_make("avdec_h264", nullptr);
+            g_object_set(h264enc, "direct-rendering", FALSE, nullptr);
 
             GstElement* videoconvert = gst_element_factory_make("videoconvert", nullptr);
 #endif
