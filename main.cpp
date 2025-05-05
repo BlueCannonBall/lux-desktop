@@ -221,7 +221,7 @@ int main(int argc, char* argv[]) {
             GstElement* appsink = gst_element_factory_make("appsink", nullptr);
             {
                 GstCaps* caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", nullptr);
-                g_object_set(appsink, "caps", caps, nullptr);
+                g_object_set(appsink, "caps", caps, "emit-signals", FALSE, "drop", TRUE, "sync", FALSE, "max-buffers", 1, nullptr);
                 gst_caps_unref(caps);
 
                 GstAppSinkCallbacks callbacks = {
@@ -316,6 +316,7 @@ int main(int argc, char* argv[]) {
             GstElement* opusdec = gst_element_factory_make("opusdec", nullptr);
 
             GstElement* autoaudiosink = gst_element_factory_make("autoaudiosink", nullptr);
+            g_object_set(autoaudiosink, "sync", FALSE, nullptr);
 
             gst_bin_add_many(GST_BIN(audio_pipeline.get()),
                 appsrc,
