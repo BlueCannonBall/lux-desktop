@@ -98,7 +98,7 @@ void VideoWindow::position_in_video(int x, int y, int& x_ret, int& y_ret) const 
     }
 }
 
-void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
+void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::Track> track, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
     if (is_dark_mode()) {
         if (get_gtk_theme() == "Breeze") {
             SDL_SetRenderDrawColor(renderer, 49, 54, 59, SDL_ALPHA_OPAQUE);
@@ -176,6 +176,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
 
                 case SDL_KEYDOWN:
                     if (!view_only &&
+                        event.key.keysym.sym != SDLK_F5 &&
                         event.key.keysym.sym != SDLK_F9 &&
                         event.key.keysym.sym != SDLK_F11 &&
                         ordered_channel->isOpen()) {
@@ -188,7 +189,9 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                     break;
 
                 case SDL_KEYUP:
-                    if (event.key.keysym.sym == SDLK_F11) {
+                    if (event.key.keysym.sym == SDLK_F5) {
+                        track->requestKeyframe();
+                    } else if (event.key.keysym.sym == SDLK_F11) {
                         Uint32 flags = SDL_GetWindowFlags(window);
                         if (flags & SDL_WINDOW_FULLSCREEN) {
                             SDL_SetWindowFullscreen(window, 0);

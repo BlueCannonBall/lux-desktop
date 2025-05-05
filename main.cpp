@@ -311,7 +311,7 @@ int main(int argc, char* argv[]) {
     }
 
     VideoWindow video_window(video, client_side_mouse, view_only);
-    video_window.run(conn, ordered_channel, unordered_channel);
+    video_window.run(conn, video_track, ordered_channel, unordered_channel);
 
     conn->close();
     gst_element_set_state(video_pipeline.get(), GST_STATE_NULL);
