@@ -316,7 +316,6 @@ int main(int argc, char* argv[]) {
             GstElement* opusdec = gst_element_factory_make("opusdec", nullptr);
 
             GstElement* autoaudiosink = gst_element_factory_make("autoaudiosink", nullptr);
-            g_object_set(autoaudiosink, "sync", FALSE, nullptr);
 
             gst_bin_add_many(GST_BIN(audio_pipeline.get()),
                 appsrc,
