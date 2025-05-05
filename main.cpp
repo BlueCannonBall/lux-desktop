@@ -157,24 +157,17 @@ int main(int argc, char* argv[]) {
                 g_object_set(appsrc, "caps", caps, "emit-signals", FALSE, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, nullptr);
                 gst_caps_unref(caps);
             }
-            video_track->onMessage([&video_track, appsrc](rtc::binary message) {
-                if (video_track->availableAmount() || video_track->bufferedAmount()) {
-                    std::cerr << "video_track->availableAmount(): " << video_track->availableAmount() << std::endl;
-                    std::cerr << "video_track->bufferedAmount():  " << video_track->bufferedAmount() << std::endl;
-                }
+            video_track->onMessage([appsrc](rtc::binary message) {
+                GstBuffer* buf = gst_buffer_new_and_alloc(message.size());
 
-                if (appsrc) {
-                    GstBuffer* buf = gst_buffer_new_and_alloc(message.size());
+                GstMapInfo map;
+                gst_buffer_map(buf, &map, GST_MAP_WRITE);
+                memcpy(map.data, message.data(), message.size());
+                gst_buffer_unmap(buf, &map);
 
-                    GstMapInfo map;
-                    gst_buffer_map(buf, &map, GST_MAP_WRITE);
-                    memcpy(map.data, message.data(), message.size());
-                    gst_buffer_unmap(buf, &map);
-
-                    GstFlowReturn flow;
-                    g_signal_emit_by_name(appsrc, "push-buffer", buf, &flow);
-                    gst_buffer_unref(buf);
-                }
+                GstFlowReturn flow;
+                g_signal_emit_by_name(appsrc, "push-buffer", buf, &flow);
+                gst_buffer_unref(buf);
             },
                 nullptr);
 
@@ -260,24 +253,17 @@ int main(int argc, char* argv[]) {
                 g_object_set(appsrc, "caps", caps, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, nullptr);
                 gst_caps_unref(caps);
             }
-            audio_track->onMessage([&audio_track, appsrc](rtc::binary message) {
-                if (audio_track->availableAmount() || audio_track->bufferedAmount()) {
-                    std::cerr << "audio_track->availableAmount(): " << audio_track->availableAmount() << std::endl;
-                    std::cerr << "audio_track->bufferedAmount():  " << audio_track->bufferedAmount() << std::endl;
-                }
+            audio_track->onMessage([appsrc](rtc::binary message) {
+                GstBuffer* buf = gst_buffer_new_and_alloc(message.size());
 
-                if (appsrc) {
-                    GstBuffer* buf = gst_buffer_new_and_alloc(message.size());
+                GstMapInfo map;
+                gst_buffer_map(buf, &map, GST_MAP_WRITE);
+                memcpy(map.data, message.data(), message.size());
+                gst_buffer_unmap(buf, &map);
 
-                    GstMapInfo map;
-                    gst_buffer_map(buf, &map, GST_MAP_WRITE);
-                    memcpy(map.data, message.data(), message.size());
-                    gst_buffer_unmap(buf, &map);
-
-                    GstFlowReturn flow;
-                    g_signal_emit_by_name(appsrc, "push-buffer", buf, &flow);
-                    gst_buffer_unref(buf);
-                }
+                GstFlowReturn flow;
+                g_signal_emit_by_name(appsrc, "push-buffer", buf, &flow);
+                gst_buffer_unref(buf);
             },
                 nullptr);
 
