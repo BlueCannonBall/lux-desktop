@@ -180,20 +180,10 @@ int main(int argc, char* argv[]) {
 
             GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
 
-#ifdef _WIN32
-            GstElement* h264parse = gst_element_factory_make("h264parse", nullptr);
-
-            GstElement* h264enc = gst_element_factory_make("d3d11h264dec", nullptr);
-
-            GstElement* videoconvert = gst_element_factory_make("d3d11convert", nullptr);
-
-            GstElement* d3d11download = gst_element_factory_make("d3d11download", nullptr);
-#else
             GstElement* h264enc = gst_element_factory_make("avdec_h264", nullptr);
             g_object_set(h264enc, "direct-rendering", FALSE, nullptr);
 
             GstElement* videoconvert = gst_element_factory_make("videoconvert", nullptr);
-#endif
 
             glib::Object<GstPad> h264enc_src_pad = gst_element_get_static_pad(h264enc, "src");
             gst_pad_add_probe(h264enc_src_pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
@@ -245,29 +235,15 @@ int main(int argc, char* argv[]) {
             gst_bin_add_many(GST_BIN(video_pipeline.get()),
                 appsrc,
                 rtph264depay,
-#ifdef _WIN32
-                h264parse,
                 h264enc,
                 videoconvert,
-                d3d11download,
-#else
-                h264enc,
-                videoconvert,
-#endif
                 appsink,
                 nullptr);
             if (!gst_element_link_many(
                     appsrc,
                     rtph264depay,
-#ifdef _WIN32
-                    h264parse,
                     h264enc,
                     videoconvert,
-                    d3d11download,
-#else
-                    h264enc,
-                    videoconvert,
-#endif
                     appsink,
                     nullptr)) {
                 fl_alert("Failed to link GStreamer elements (video pipeline)");
