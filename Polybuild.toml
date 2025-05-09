@@ -1,27 +1,35 @@
 [paths]
 output = "lux-desktop"
-source = [".", "Polyweb", "Polyweb/Polynet", "FL_Flex"]
-include = ["libdatachannel/include"]
+source = [".", "Polyweb", "Polyweb/Polynet"]
+include = ["fltk", "libdatachannel/include"]
 artifact = "obj"
 install = "/usr/local/bin"
 
 [options]
-compilation-flags = "-Wall -std=c++17 -O3 -march=native -mtune=native -pthread -DRTC_STATIC"
-libraries = ["fltk", "ssl", "crypto"]
+compilation-flags = "-Wall -std=c++17 -Ifltk/build -DRTC_STATIC -O3 -march=native -mtune=native -pthread"
+link-time-flags = "`fltk/build/fltk-config --ldstaticflags`"
+libraries = ["ssl", "crypto"]
 static-libraries = [
-	"libdatachannel/build/libdatachannel-static.a",
-	"libdatachannel/build/deps/libsrtp/libsrtp2.a",
-	"libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a",
+    "libdatachannel/build/libdatachannel-static.a",
+    "libdatachannel/build/deps/libsrtp/libsrtp2.a",
+    "libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a",
 ]
 pkg-config-libraries = ["sdl2", "gstreamer-video-1.0", "gstreamer-app-1.0", "gstreamer-1.0", "nice", "gio-2.0"]
-preludes = [""" \
-	cd libdatachannel && \
-	cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 && \
-	cd build && \
-	$(MAKE) datachannel-static \
-"""]
-clean-preludes = ["rm -rf libdatachannel/build"]
+preludes = [
+    """ \
+        cd fltk && \
+        cmake . -B build -DFLTK_BUILD_TEST=OFF && \
+        cmake --build build \
+    """,
+    """ \
+        cd libdatachannel && \
+        cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 && \
+        cd build && \
+        make datachannel-static \
+    """
+]
+clean-preludes = ["rm -rf fltk/build", "rm -rf libdatachannel/build"]
 
 [env.OS.Windows_NT.options]
-compilation-flags = "-Wall -std=c++17 -O3 -march=native -mtune=native -pthread -DRTC_STATIC -static-libgcc -static-libstdc++"
-libraries = ["fltk", "ssl", "crypto", "ws2_32", "iphlpapi"]
+compilation-flags = "-Wall -std=c++17 -Ifltk/build -DRTC_STATIC -O3 -march=native -mtune=native -pthread -static-libgcc -static-libstdc++"
+libraries = ["ssl", "crypto", "ws2_32", "iphlpapi"]

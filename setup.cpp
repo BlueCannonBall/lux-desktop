@@ -1,6 +1,7 @@
 #include "setup.hpp"
 #include "json.hpp"
 #include <FL/Fl_Box.H>
+#include <FL/Fl_Flex.H>
 #include <fstream>
 #include <iostream>
 #include <stdlib.h>
@@ -54,33 +55,34 @@ SetupWindow::SetupWindow():
     xclass("lux-desktop");
     size_range(350, 250, 0, 400);
     auto column = new Fl_Flex(10, 10, w() - 20, h() - 20, Fl_Flex::COLUMN);
+    column->gap(5);
 
     {
         auto row = new Fl_Flex(Fl_Flex::ROW);
-        auto label = new Label(0, 0, "Address:");
+        auto label = new Label(0, 0, "Address: ");
         address_input = new Fl_Input(0, 0, 0, 0, "");
-        row->setSize(label, label->w());
+        row->fixed(label, label->w());
         row->end();
     }
 
     {
         auto row = new Fl_Flex(Fl_Flex::ROW);
-        auto label = new Label(0, 0, "Password:");
+        auto label = new Label(0, 0, "Password: ");
         password_input = new Fl_Secret_Input(0, 0, 0, 0, "");
-        row->setSize(label, label->w());
+        row->fixed(label, label->w());
         row->end();
     }
 
     {
         auto row = new Fl_Flex(Fl_Flex::ROW);
-        auto label = new Label(0, 0, "Bitrate:");
+        auto label = new Label(0, 0, "Bitrate: ");
         bitrate_spinner = new Fl_Spinner(0, 0, 0, 0, "");
         bitrate_spinner->type(FL_INT_INPUT);
         bitrate_spinner->minimum(500);
         bitrate_spinner->maximum(10000);
         bitrate_spinner->value(4000);
-        row->setSize(label, label->w());
-        row->setSize(bitrate_spinner, 80);
+        row->fixed(label, label->w());
+        row->fixed(bitrate_spinner, 80);
         row->end();
     }
 
