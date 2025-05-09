@@ -8,4 +8,4 @@ if [[ ! " $* " =~ [[:space:]](clean|install)[[:space:]] ]]; then
 	 sh -c " cd libdatachannel && cmake -B build -G \"Unix Makefiles\" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 && cd build && make datachannel-static "
 fi
 
-make -f polybuild.mk "$@"
+make -f .polybuild.mk "$@"
