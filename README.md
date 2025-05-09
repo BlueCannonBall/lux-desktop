@@ -10,7 +10,7 @@ Lux is an extremely smooth remote desktop client. Lux can connect to [Tenebra](h
 
 ## Usage
 
-Lux is a cross-platform desktop app that depends on FLTK, SDL, and GStreamer. It can be compiled using `make`.
+Lux is a cross-platform desktop app that depends on FLTK, SDL, and GStreamer. It can be compiled using `./polybuild.sh`, which works much like `make`.
 
 ## Screenshots
 
