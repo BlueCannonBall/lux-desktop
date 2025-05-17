@@ -18,15 +18,14 @@ pkg-config-libraries = ["sdl2", "gstreamer-video-1.0", "gstreamer-app-1.0", "gst
 preludes = [
     """ \
         cd fltk && \
-        cmake . -B build -DCMAKE_BUILD_TYPE=Release -DFLTK_BUILD_TEST=OFF && \
-        cmake --build build \
+        cmake . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DFLTK_BUILD_TEST=OFF && \
+        $(MAKE) -C build \
     """,
     """ \
         cd libdatachannel && \
         cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DUSE_NICE=1 && \
-        cd build && \
-        make datachannel-static \
-    """
+        $(MAKE) -C build datachannel-static \
+    """,
 ]
 clean-preludes = ["rm -rf fltk/build", "rm -rf libdatachannel/build"]
 
