@@ -5,7 +5,7 @@ members = ["dist:."]
 name = "lux-desktop"
 # (Optional) Descriptive text about your package; some installers will present this to users
 description = "A remote desktop client compatible with Tenebra."
-version = "0.1.4"
+version = "0.1.5"
 license = "GPL-3.0-only"
 repository = "https://github.com/BlueCannonBall/lux-desktop"
 binaries = ["lux-desktop"]
@@ -27,7 +27,24 @@ install-path = "CARGO_HOME"
 install-updater = false
 
 [dist.dependencies.apt]
+libx11-dev = "*"
+libglu1-mesa-dev = "*"
 libxft-dev = "*"
+libxcursor-dev = "*"
+libasound2-dev = "*"
+freeglut3-dev = "*"
+libcairo2-dev = "*"
+libfontconfig1-dev = "*"
+libglew-dev = "*"
+libjpeg-dev = "*"
+libpng-dev = "*"
+"libpango1.0-dev" = "*"
+libxinerama-dev = "*"
+libwayland-dev = "*"
+wayland-protocols = "*"
+libxkbcommon-dev = "*"
+libdbus-1-dev = "*"
+libdecor-0-dev = "*"
 libssl-dev = "*"
 libnice-dev = "*"
 "libgstreamer1.0-dev" = "*"
