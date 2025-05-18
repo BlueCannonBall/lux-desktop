@@ -12,7 +12,6 @@
 #include <gst/gst.h>
 #include <gst/video/video.h>
 #include <inttypes.h>
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <rtc/rtc.hpp>
@@ -38,7 +37,7 @@ int main(int argc, char* argv[]) {
 
     Fl::visual(FL_DOUBLE | FL_INDEX);
     Fl::scheme("gtk+");
-    rtc::InitLogger(rtc::LogLevel::Warning);
+    rtc::InitLogger(rtc::LogLevel::Debug);
     pn::init();
     pw::threadpool.resize(0); // The threadpool is only used by Polyweb in server applications
     gst_init(&argc, &argv);
