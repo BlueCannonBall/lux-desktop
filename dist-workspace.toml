@@ -1,0 +1,53 @@
+[workspace]
+members = ["dist:."]
+
+[package]
+name = "lux-desktop"
+# (Optional) Descriptive text about your package; some installers will present this to users
+description = "A remote desktop client compatible with Tenebra."
+version = "0.1.0"
+license = "GPL-3.0-only"
+repository = "https://github.com/BlueCannonBall/lux-desktop"
+binaries = ["lux-desktop"]
+build-command = ["make"]
+
+# Config for 'dist'
+[dist]
+# The preferred dist version to use in CI (Cargo.toml SemVer syntax)
+cargo-dist-version = "0.28.0"
+# CI backends to support
+ci = "github"
+# The installers to generate for each app
+installers = ["shell"]
+# Target platforms to build apps for (Rust target-triple syntax)
+targets = ["x86_64-unknown-linux-gnu"]
+# Path that installers should place binaries in
+install-path = "CARGO_HOME"
+# Whether to install an updater program
+install-updater = false
+
+[dist.dependencies.apt]
+libssl-dev = "*"
+libnice-dev = "*"
+"libgstreamer1.0-dev" = "*"
+"libgstreamer-plugins-base1.0-dev" = "*"
+"libgstreamer-plugins-bad1.0-dev" = "*"
+"gstreamer1.0-plugins-base" = "*"
+"gstreamer1.0-plugins-good" = "*"
+"gstreamer1.0-plugins-bad" = "*"
+"gstreamer1.0-plugins-ugly" = "*"
+"gstreamer1.0-libav" = "*"
+"gstreamer1.0-tools" = "*"
+"gstreamer1.0-x" = "*"
+"gstreamer1.0-alsa" = "*"
+"gstreamer1.0-gl" = "*"
+"gstreamer1.0-gtk3" = "*"
+"gstreamer1.0-qt5" = "*"
+"gstreamer1.0-pulseaudio" = "*"
+libsdl2-dev = "*"
+
+[dist.github-custom-runners]
+global = "ubuntu-latest"
+
+[dist.github-custom-runners.x86_64-unknown-linux-gnu]
+runner = "ubuntu-latest"
