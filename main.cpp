@@ -18,6 +18,7 @@
 #include <string.h>
 #include <string>
 #ifdef _WIN32
+    #include <iostream>
     #include <stdio.h>
     #include <windows.h>
 #endif
