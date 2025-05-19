@@ -18,7 +18,7 @@ static_libraries := libdatachannel/build/libdatachannel-static.a libdatachannel/
 
 ifeq ($(OS),Windows_NT)
 	compilation_flags := -Wall -std=c++17 -Ifltk/build -DRTC_STATIC -O3 -march=native -mtune=native -pthread -static-libgcc -static-libstdc++ -Ifltk -Ilibdatachannel/include `pkg-config --cflags sdl2 gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0 nice gio-2.0`
-link_time_flags := `fltk/build/fltk-config --ldstaticflags`
+	link_time_flags := `fltk/build/fltk-config --ldstaticflags`
 	libraries := -lssl -lcrypto -lws2_32 -liphlpapi `pkg-config --libs sdl2 gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0 nice gio-2.0`
 endif
 
