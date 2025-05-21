@@ -278,6 +278,8 @@ int main(int argc, char* argv[]) {
 
             GstElement* opusdec = gst_element_factory_make("opusdec", nullptr);
 
+            GstElement* audioconvert = gst_element_factory_make("audioconvert", nullptr);
+
             GstElement* autoaudiosink = gst_element_factory_make("autoaudiosink", nullptr);
 
             gst_bin_add_many(GST_BIN(audio_pipeline.get()),
@@ -285,12 +287,14 @@ int main(int argc, char* argv[]) {
                 rtpopusdepay,
                 capsfilter,
                 opusdec,
+                audioconvert,
                 autoaudiosink,
                 nullptr);
             if (!gst_element_link_many(appsrc,
                     rtpopusdepay,
                     capsfilter,
                     opusdec,
+                    audioconvert,
                     autoaudiosink,
                     nullptr)) {
                 fl_alert("Failed to link GStreamer elements (audio pipeline)");
