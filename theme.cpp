@@ -46,7 +46,7 @@ static void draw_dark_fltk_up_box(int x, int y, int w, int h, Fl_Color c) {
     fl_xyline(x + 2, y + 2, x + w - 3);
     Fl::set_box_color(fl_color_average(fl_rgb_color(79), c, 0.2f));
     fl_xyline(x + 2, y + 3, x + w - 3);
-    Fl::set_box_color(fl_color_average(fl_rgb_color(79), c, 0.01f));
+    Fl::set_box_color(fl_color_average(fl_rgb_color(79), c, 0.1f));
     fl_xyline(x + 2, y + 4, x + w - 3);
     Fl::set_box_color(c);
     fl_rectf(x + 2, y + 5, w - 4, h - 7);
@@ -72,7 +72,7 @@ static void draw_dark_fltk_down_frame(int x, int y, int w, int h, Fl_Color c) {
     fl_vertex(x, y + h - 3);
     fl_end_loop();
 
-    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.1f));
+    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.075f));
     fl_xyline(x + 2, y + 1, x + w - 3);
     fl_yxline(x + 1, y + 2, y + h - 3);
 
@@ -139,7 +139,7 @@ static void draw_light_fltk_down_frame(int x, int y, int w, int h, Fl_Color c) {
     fl_vertex(x, y + h - 3);
     fl_end_loop();
 
-    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.1f));
+    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.075f));
     fl_xyline(x + 2, y + 1, x + w - 3);
     fl_yxline(x + 1, y + 2, y + h - 3);
 
