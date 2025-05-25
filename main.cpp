@@ -42,10 +42,11 @@ int main(int argc, char* argv[]) {
         Fl::scheme("gtk+");
         Fl::background(41, 44, 48);
         Fl::background2(20, 22, 24);
+        Fl::set_color(FL_SELECTION_COLOR, 7, 59, 165);
     } else {
         Fl::scheme("oxy");
+        Fl::set_color(FL_SELECTION_COLOR, 51, 103, 209);
     }
-    Fl::set_color(FL_SELECTION_COLOR, 7, 59, 165);
     rtc::InitLogger(rtc::LogLevel::Debug);
     pn::init();
     pw::threadpool.resize(0); // The threadpool is only used by Polyweb in server applications
