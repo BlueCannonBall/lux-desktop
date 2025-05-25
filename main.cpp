@@ -3,6 +3,7 @@
 #include "json.hpp"
 #include "media_receiver.hpp"
 #include "setup.hpp"
+#include "theme.hpp"
 #include "video.hpp"
 #include "waiter.hpp"
 #include <FL/Fl.H>
@@ -18,7 +19,7 @@
 #include <string.h>
 #include <string>
 #ifdef _WIN32
-    #include <iostream>
+    #include <ios>
     #include <stdio.h>
     #include <windows.h>
 #endif
@@ -37,7 +38,14 @@ int main(int argc, char* argv[]) {
 #endif
 
     Fl::visual(FL_DOUBLE | FL_INDEX);
-    Fl::scheme("gtk+");
+    if (is_dark_mode()) {
+        Fl::scheme("gtk+");
+        Fl::background(41, 44, 48);
+        Fl::background2(20, 22, 24);
+    } else {
+        Fl::scheme("oxy");
+    }
+    Fl::set_color(FL_SELECTION_COLOR, 7, 59, 165);
     rtc::InitLogger(rtc::LogLevel::Debug);
     pn::init();
     pw::threadpool.resize(0); // The threadpool is only used by Polyweb in server applications
