@@ -22,7 +22,7 @@ std::string get_gtk_theme() {
 }
 
 static void draw_dark_fltk_up_frame(int x, int y, int w, int h, Fl_Color c) {
-    Fl::set_box_color(fl_color_average(fl_rgb_color(79, 79, 79), c, 0.5f));
+    Fl::set_box_color(fl_color_average(fl_rgb_color(79), c, 0.5f));
     fl_xyline(x + 2, y + 1, x + w - 3);
     fl_yxline(x + 1, y + 2, y + h - 3);
 
@@ -42,11 +42,11 @@ static void draw_dark_fltk_up_frame(int x, int y, int w, int h, Fl_Color c) {
 static void draw_dark_fltk_up_box(int x, int y, int w, int h, Fl_Color c) {
     draw_dark_fltk_up_frame(x, y, w, h, c);
 
-    Fl::set_box_color(fl_color_average(fl_rgb_color(79, 79, 79), c, 0.4f));
+    Fl::set_box_color(fl_color_average(fl_rgb_color(79), c, 0.4f));
     fl_xyline(x + 2, y + 2, x + w - 3);
-    Fl::set_box_color(fl_color_average(fl_rgb_color(79, 79, 79), c, 0.2f));
+    Fl::set_box_color(fl_color_average(fl_rgb_color(79), c, 0.2f));
     fl_xyline(x + 2, y + 3, x + w - 3);
-    Fl::set_box_color(fl_color_average(fl_rgb_color(79, 79, 79), c, 0.01f));
+    Fl::set_box_color(fl_color_average(fl_rgb_color(79), c, 0.01f));
     fl_xyline(x + 2, y + 4, x + w - 3);
     Fl::set_box_color(c);
     fl_rectf(x + 2, y + 5, w - 4, h - 7);
