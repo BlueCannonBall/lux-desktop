@@ -5,7 +5,7 @@ members = ["dist:."]
 name = "lux-desktop"
 # (Optional) Descriptive text about your package; some installers will present this to users
 description = "A remote desktop client compatible with Tenebra."
-version = "0.2.0"
+version = "0.2.1"
 license = "GPL-3.0-only"
 repository = "https://github.com/BlueCannonBall/lux-desktop"
 binaries = ["lux-desktop"]
