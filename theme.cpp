@@ -26,7 +26,7 @@ static void draw_dark_fltk_up_frame(int x, int y, int w, int h, Fl_Color c) {
     fl_xyline(x + 2, y + 1, x + w - 3);
     fl_yxline(x + 1, y + 2, y + h - 3);
 
-    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.6f));
+    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.65f));
     fl_begin_loop();
     fl_vertex(x, y + 2);
     fl_vertex(x + 2, y);
