@@ -11,6 +11,7 @@ link-time-flags = "`fltk/build/fltk-config --ldstaticflags`"
 libraries = ["ssl", "crypto"]
 static-libraries = [
     "libdatachannel/build/libdatachannel-static.a",
+    "libdatachannel/build/deps/libjuice/libjuice-static.a",
     "libdatachannel/build/deps/libsrtp/libsrtp2.a",
     "libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a",
 ]
@@ -23,12 +24,18 @@ preludes = [
     """,
     """ \
         cd libdatachannel && \
-        cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DUSE_NICE=1 && \
+        cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && \
         "$(MAKE)" -C build datachannel-static \
     """,
 ]
 clean-preludes = ["rm -rf fltk/build", "rm -rf libdatachannel/build"]
 
 [env.OS.Windows_NT.options]
-compilation-flags = "-Wall -std=c++17 -Ifltk/build -DRTC_STATIC -O3 -march=native -mtune=native -pthread -static-libgcc -static-libstdc++"
+compilation-flags = "/W4 /std:c++17 /EHsc /Ifltk/build /DRTC_STATIC /Ox /arch:native"
 libraries = ["ssl", "crypto", "ws2_32", "iphlpapi"]
+static-libraries = [
+    "libdatachannel/build/datachannel-static.lib",
+    "libdatachannel/build/deps/libjuice/juice-static.lib",
+    "libdatachannel/build/deps/libsrtp/srtp2.lib",
+    "libdatachannel/build/deps/usrsctp/usrsctplib/usrsctp.lib",
+]
