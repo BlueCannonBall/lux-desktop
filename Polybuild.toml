@@ -19,12 +19,12 @@ preludes = [
     """ \
         cd fltk && \
         cmake . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DFLTK_BUILD_TEST=OFF && \
-        $(MAKE) -C build \
+        "$(MAKE)" -C build \
     """,
     """ \
         cd libdatachannel && \
         cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DUSE_NICE=1 && \
-        $(MAKE) -C build datachannel-static \
+        "$(MAKE)" -C build datachannel-static \
     """,
 ]
 clean-preludes = ["rm -rf fltk/build", "rm -rf libdatachannel/build"]

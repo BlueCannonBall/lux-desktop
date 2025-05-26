@@ -5,13 +5,13 @@ all: prelude0 prelude1
 .PHONY: all
 
 prelude0:
-	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Executing prelude:  cd fltk && cmake . -B build -G \"Unix Makefiles\" -DCMAKE_BUILD_TYPE=Release -DFLTK_BUILD_TEST=OFF && $(MAKE) -C build "
-	@ cd fltk && cmake . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DFLTK_BUILD_TEST=OFF && $(MAKE) -C build 
+	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Executing prelude:  cd fltk && cmake . -B build -G \"Unix Makefiles\" -DCMAKE_BUILD_TYPE=Release -DFLTK_BUILD_TEST=OFF && \"$(MAKE)\" -C build "
+	@ cd fltk && cmake . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DFLTK_BUILD_TEST=OFF && "$(MAKE)" -C build 
 .PHONY: prelude0
 
 prelude1:
-	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Executing prelude:  cd libdatachannel && cmake -B build -G \"Unix Makefiles\" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DUSE_NICE=1 && $(MAKE) -C build datachannel-static "
-	@ cd libdatachannel && cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DUSE_NICE=1 && $(MAKE) -C build datachannel-static 
+	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Executing prelude:  cd libdatachannel && cmake -B build -G \"Unix Makefiles\" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DUSE_NICE=1 && \"$(MAKE)\" -C build datachannel-static "
+	@ cd libdatachannel && cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DUSE_NICE=1 && "$(MAKE)" -C build datachannel-static 
 .PHONY: prelude1
 
 clean:
