@@ -15,7 +15,7 @@ static-libraries = [
     "libdatachannel/build/deps/libsrtp/libsrtp2.a",
     "libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a",
 ]
-pkg-config-libraries = ["sdl2", "gstreamer-video-1.0", "gstreamer-app-1.0", "gstreamer-1.0", "nice", "gio-2.0"]
+pkg-config-libraries = ["sdl2", "gstreamer-video-1.0", "gstreamer-app-1.0", "gstreamer-1.0", "gio-2.0"]
 preludes = [
     """ \
         cd fltk && \
@@ -30,12 +30,18 @@ preludes = [
 ]
 clean-preludes = ["rm -rf fltk/build", "rm -rf libdatachannel/build"]
 
+[env.OS.Windows_NT.paths]
+library = ["\"$(SDL_ROOT_DIR)\"/lib/x64", "\"$(OPENSSL_ROOT_DIR)\"/lib/VC/x64/MD"]
+
 [env.OS.Windows_NT.options]
-compilation-flags = "/W4 /std:c++17 /EHsc /Ifltk/build /DRTC_STATIC /Ox /arch:native"
-libraries = ["ssl", "crypto", "ws2_32", "iphlpapi"]
+compilation-flags = "/W3 /std:c++20 /EHsc /I\"fltk/build\" /I\"$(SDL_ROOT_DIR)\"/include /I\"$(OPENSSL_ROOT_DIR)\"/include /DRTC_STATIC /O2 /MD"
+link-time-flags = "/SUBSYSTEM:WINDOWS"
+libraries = ["SDL2.lib", "SDL2main.lib", "libssl.lib", "libcrypto.lib", "iphlpapi.lib", "gdiplus.lib", "shell32.lib", "ole32.lib", "oleaut32.lib", "comdlg32.lib", "winspool.lib", "user32.lib", "bcrypt.lib", "kernel32.lib", "gdi32.lib", "advapi32.lib", "comctl32.lib", "imm32.lib", "ws2_32.lib"]
 static-libraries = [
+    "fltk/build/lib/fltk.lib",
     "libdatachannel/build/datachannel-static.lib",
     "libdatachannel/build/deps/libjuice/juice-static.lib",
     "libdatachannel/build/deps/libsrtp/srtp2.lib",
     "libdatachannel/build/deps/usrsctp/usrsctplib/usrsctp.lib",
 ]
+pkg-config-libraries = ["gstreamer-video-1.0", "gstreamer-app-1.0", "gstreamer-1.0"]

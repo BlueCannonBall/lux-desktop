@@ -1,24 +1,34 @@
 #include "theme.hpp"
-#include "glib.hpp"
 #include <FL/Fl.H>
 #include <FL/fl_draw.H>
-#include <gio/gio.h>
 #include <string.h>
+#ifndef _WIN32
+    #include "glib.hpp"
+    #include <gio/gio.h>
+#endif
 
 bool is_dark_mode() {
+#ifndef _WIN32
     glib::Object<GSettings> settings = g_settings_new("org.gnome.desktop.interface");
     char* theme = g_settings_get_string(settings.get(), "color-scheme");
     bool ret = strcmp(theme, "default") && strcmp(theme, "prefer-light");
     g_free(theme);
     return ret;
+#else
+    return false;
+#endif
 }
 
 std::string get_gtk_theme() {
+#ifndef _WIN32
     glib::Object<GSettings> settings = g_settings_new("org.gnome.desktop.interface");
     char* theme = g_settings_get_string(settings.get(), "gtk-theme");
     std::string ret = theme;
     g_free(theme);
     return ret;
+#else
+    return {};
+#endif
 }
 
 static void draw_dark_fltk_up_frame(int x, int y, int w, int h, Fl_Color c) {
