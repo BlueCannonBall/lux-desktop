@@ -190,6 +190,8 @@ int main(int argc, char* argv[]) {
                         video->mutex.lock();
                         video->width = info.width;
                         video->height = info.height;
+                        video->stride = info.stride[0];
+                        video->offset = info.offset[0];
                         video->resized = true;
                         video->set_sample(nullptr);
                         video->mutex.unlock();
