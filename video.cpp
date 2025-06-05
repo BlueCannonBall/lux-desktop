@@ -44,7 +44,7 @@ void VideoWindow::set_keyboard_grab(bool grabbed) {
 void VideoWindow::letterbox(int& x, int& y, int& width, int& height) const {
     int window_width;
     int window_height;
-    SDL_GetWindowSize(window, &window_width, &window_height);
+    SDL_GetRendererOutputSize(renderer, &window_width, &window_height);
 
     double video_aspect_ratio = (double) video.width / video.height;
     double window_aspect_ratio = (double) window_width / window_height;
