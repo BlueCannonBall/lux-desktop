@@ -61,7 +61,7 @@ public:
         SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
         SDL_InitSubSystem(SDL_INIT_VIDEO);
 
-        window = SDL_CreateWindow("Lux Client", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+        window = SDL_CreateWindow("Lux Client", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
         if (!view_only) {
             set_keyboard_grab(true);
             SDL_SetRelativeMouseMode(client_side_mouse ? SDL_FALSE : SDL_TRUE);

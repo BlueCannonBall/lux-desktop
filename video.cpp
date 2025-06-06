@@ -285,7 +285,6 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             for (int y = 0; y < video.height; ++y) {
                 memcpy((char*) pixels + y * pitch, map.data + video.offset + y * video.stride, video.width * 3);
             }
-            memcpy(pixels, map.data, video.width * video.height * 3);
             SDL_UnlockTexture(texture);
             dirty = true;
 
