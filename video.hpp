@@ -7,7 +7,6 @@
 #include <memory>
 #include <mutex>
 #include <rtc/rtc.hpp>
-#include <stddef.h>
 
 extern Uint32 VIDEO_FRAME_EVENT;
 
@@ -16,8 +15,6 @@ struct Video {
     std::condition_variable cv;
     int width;
     int height;
-    int stride;
-    size_t offset;
     bool resized = false;
     GstSample* sample = nullptr;
 

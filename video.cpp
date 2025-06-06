@@ -3,6 +3,7 @@
 #include "keys.hpp"
 #include "theme.hpp"
 #include <FL/fl_ask.H>
+#include <gst/video/video.h>
 #include <math.h>
 #if !defined(_WIN32) && !defined(__APPLE__)
     #include <iostream>
@@ -275,6 +276,9 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 video.resized = false;
             }
 
+            GstVideoInfo info;
+            gst_video_info_from_caps(&info, gst_sample_get_caps(video.sample));
+
             GstBuffer* buf = gst_sample_get_buffer(video.sample);
             GstMapInfo map;
             gst_buffer_map(buf, &map, GST_MAP_READ);
@@ -283,7 +287,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             int pitch;
             SDL_LockTexture(texture, nullptr, &pixels, &pitch);
             for (int y = 0; y < video.height; ++y) {
-                memcpy((char*) pixels + y * pitch, map.data + video.offset + y * video.stride, video.width * 3);
+                memcpy((char*) pixels + y * pitch, map.data + info.offset[0] + y * info.stride[0], video.width * 3);
             }
             SDL_UnlockTexture(texture);
             dirty = true;

@@ -11,7 +11,6 @@
 #include <SDL2/SDL_main.h>
 #include <gst/app/gstappsink.h>
 #include <gst/gst.h>
-#include <gst/video/video.h>
 #include <inttypes.h>
 #include <memory>
 #include <mutex>
@@ -182,16 +181,13 @@ int main(int argc, char* argv[]) {
                     auto video = (Video*) data;
                     GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
                     if (GST_EVENT_TYPE(event) == GST_EVENT_CAPS) {
-                        GstVideoInfo info;
                         GstCaps* caps;
                         gst_event_parse_caps(event, &caps);
-                        gst_video_info_from_caps(&info, caps);
 
+                        GstStructure* structure = gst_caps_get_structure(caps, 0);
                         video->mutex.lock();
-                        video->width = info.width;
-                        video->height = info.height;
-                        video->stride = info.stride[0];
-                        video->offset = info.offset[0];
+                        gst_structure_get_int(structure, "width", &video->width);
+                        gst_structure_get_int(structure, "height", &video->height);
                         video->resized = true;
                         video->set_sample(nullptr);
                         video->mutex.unlock();
