@@ -5,10 +5,10 @@
 #include <FL/fl_ask.H>
 #include <gst/video/video.h>
 #include <math.h>
+#include <string.h>
 #if !defined(_WIN32) && !defined(__APPLE__)
     #include <iostream>
     #include <stdlib.h>
-    #include <string.h>
 #endif
 
 using nlohmann::json;
