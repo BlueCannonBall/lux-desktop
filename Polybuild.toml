@@ -11,11 +11,10 @@ link-time-flags = "`fltk/build/fltk-config --ldstaticflags`"
 libraries = ["ssl", "crypto"]
 static-libraries = [
     "libdatachannel/build/libdatachannel-static.a",
-    "libdatachannel/build/deps/libjuice/libjuice-static.a",
     "libdatachannel/build/deps/libsrtp/libsrtp2.a",
     "libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a",
 ]
-pkg-config-libraries = ["sdl2", "gstreamer-video-1.0", "gstreamer-app-1.0", "gstreamer-1.0", "gio-2.0"]
+pkg-config-libraries = ["sdl2", "gstreamer-video-1.0", "gstreamer-app-1.0", "gstreamer-1.0", "gio-2.0", "nice"]
 preludes = [
     """ \
         cd fltk && \
@@ -24,7 +23,7 @@ preludes = [
     """,
     """ \
         cd libdatachannel && \
-        cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && \
+        cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && \
         "$(MAKE)" -C build datachannel-static \
     """,
 ]
@@ -40,8 +39,7 @@ libraries = ["SDL2.lib", "SDL2main.lib", "libssl.lib", "libcrypto.lib", "crypt32
 static-libraries = [
     "fltk/build/lib/fltk.lib",
     "libdatachannel/build/datachannel-static.lib",
-    "libdatachannel/build/deps/libjuice/juice-static.lib",
     "libdatachannel/build/deps/libsrtp/srtp2.lib",
     "libdatachannel/build/deps/usrsctp/usrsctplib/usrsctp.lib",
 ]
-pkg-config-libraries = ["gstreamer-video-1.0", "gstreamer-app-1.0", "gstreamer-1.0"]
+pkg-config-libraries = ["gstreamer-video-1.0", "gstreamer-app-1.0", "gstreamer-1.0", "nice"]

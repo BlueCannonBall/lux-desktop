@@ -26,17 +26,17 @@ ifeq ($(OS),Windows_NT)
 endif
 
 compiler := $(CXX)
-compilation_flags := -Wall -std=c++17 -Ifltk/build -DRTC_STATIC -O3 -march=native -mtune=native -pthread $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags sdl2 gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0 gio-2.0`
+compilation_flags := -Wall -std=c++17 -Ifltk/build -DRTC_STATIC -O3 -march=native -mtune=native -pthread $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags sdl2 gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0 gio-2.0 nice`
 link_time_flags := `fltk/build/fltk-config --ldstaticflags`
-libraries := $(library_flag)ssl $(library_flag)crypto `pkg-config $(pkg_config_syntax) --libs sdl2 gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0 gio-2.0`
-static_libraries := libdatachannel/build/libdatachannel-static.a libdatachannel/build/deps/libjuice/libjuice-static.a libdatachannel/build/deps/libsrtp/libsrtp2.a libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a
+libraries := $(library_flag)ssl $(library_flag)crypto `pkg-config $(pkg_config_syntax) --libs sdl2 gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0 gio-2.0 nice`
+static_libraries := libdatachannel/build/libdatachannel-static.a libdatachannel/build/deps/libsrtp/libsrtp2.a libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a
 prefix := /usr/local/bin
 
 ifeq ($(OS),Windows_NT)
-	compilation_flags := /W3 /std:c++20 /EHsc /I"fltk/build" /I"$(SDL_ROOT_DIR)"/include /I"$(OPENSSL_ROOT_DIR)"/include /DRTC_STATIC /Ox $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0`
+	compilation_flags := /W3 /std:c++20 /EHsc /I"fltk/build" /I"$(SDL_ROOT_DIR)"/include /I"$(OPENSSL_ROOT_DIR)"/include /DRTC_STATIC /Ox $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0 nice`
 	link_time_flags := /SUBSYSTEM:WINDOWS $(library_path_flag)"$(SDL_ROOT_DIR)"/lib/x64 $(library_path_flag)"$(OPENSSL_ROOT_DIR)"/lib
-	libraries := $(library_flag)SDL2.lib $(library_flag)SDL2main.lib $(library_flag)libssl.lib $(library_flag)libcrypto.lib $(library_flag)crypt32.lib $(library_flag)iphlpapi.lib $(library_flag)gdiplus.lib $(library_flag)shell32.lib $(library_flag)ole32.lib $(library_flag)oleaut32.lib $(library_flag)comdlg32.lib $(library_flag)winspool.lib $(library_flag)user32.lib $(library_flag)bcrypt.lib $(library_flag)kernel32.lib $(library_flag)gdi32.lib $(library_flag)advapi32.lib $(library_flag)comctl32.lib $(library_flag)imm32.lib $(library_flag)ws2_32.lib `pkg-config $(pkg_config_syntax) --libs gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0`
-	static_libraries := fltk/build/lib/fltk.lib libdatachannel/build/datachannel-static.lib libdatachannel/build/deps/libjuice/juice-static.lib libdatachannel/build/deps/libsrtp/srtp2.lib libdatachannel/build/deps/usrsctp/usrsctplib/usrsctp.lib
+	libraries := $(library_flag)SDL2.lib $(library_flag)SDL2main.lib $(library_flag)libssl.lib $(library_flag)libcrypto.lib $(library_flag)crypt32.lib $(library_flag)iphlpapi.lib $(library_flag)gdiplus.lib $(library_flag)shell32.lib $(library_flag)ole32.lib $(library_flag)oleaut32.lib $(library_flag)comdlg32.lib $(library_flag)winspool.lib $(library_flag)user32.lib $(library_flag)bcrypt.lib $(library_flag)kernel32.lib $(library_flag)gdi32.lib $(library_flag)advapi32.lib $(library_flag)comctl32.lib $(library_flag)imm32.lib $(library_flag)ws2_32.lib `pkg-config $(pkg_config_syntax) --libs gstreamer-video-1.0 gstreamer-app-1.0 gstreamer-1.0 nice`
+	static_libraries := fltk/build/lib/fltk.lib libdatachannel/build/datachannel-static.lib libdatachannel/build/deps/libsrtp/srtp2.lib libdatachannel/build/deps/usrsctp/usrsctplib/usrsctp.lib
 	prefix := /usr/local/bin
 endif
 
