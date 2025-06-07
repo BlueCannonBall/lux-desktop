@@ -9,6 +9,7 @@ ifeq ($(OS),Windows_NT)
 	CC := cl
 	CXX := cl
 	CL := /nologo
+	LINK := /nologo
 	MSYS_NO_PATHCONV := 1
 	export CC CXX CL MSYS_NO_PATHCONV
 endif
