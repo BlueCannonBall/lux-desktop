@@ -1,10 +1,10 @@
 #include "theme.hpp"
 #include <FL/Fl.H>
 #include <FL/fl_draw.H>
-#include <string.h>
 #ifndef _WIN32
     #include "glib.hpp"
     #include <gio/gio.h>
+    #include <string.h>
 #endif
 
 bool is_dark_mode() {
@@ -16,18 +16,6 @@ bool is_dark_mode() {
     return ret;
 #else
     return false;
-#endif
-}
-
-std::string get_gtk_theme() {
-#ifndef _WIN32
-    glib::Object<GSettings> settings = g_settings_new("org.gnome.desktop.interface");
-    char* theme = g_settings_get_string(settings.get(), "gtk-theme");
-    std::string ret = theme;
-    g_free(theme);
-    return ret;
-#else
-    return {};
 #endif
 }
 
@@ -168,25 +156,15 @@ void configure_fltk_colors() {
         Fl::set_boxtype(FL_UP_FRAME, draw_dark_fltk_up_frame, 2, 2, 4, 4);
         Fl::set_boxtype(FL_DOWN_BOX, draw_dark_fltk_down_box, 2, 2, 4, 4);
         Fl::set_boxtype(FL_DOWN_FRAME, draw_dark_fltk_down_frame, 2, 2, 4, 4);
-        if (get_gtk_theme() == "Breeze") {
-            Fl::background(41, 44, 48);
-            Fl::background2(20, 22, 24);
-        } else {
-            Fl::background(44, 44, 44);
-            Fl::background2(22, 22, 22);
-        }
+        Fl::background(44, 44, 44);
+        Fl::background2(22, 22, 22);
     } else {
         Fl::set_boxtype(FL_UP_BOX, draw_light_fltk_up_box, 2, 2, 4, 4);
         Fl::set_boxtype(FL_UP_FRAME, draw_light_fltk_up_frame, 2, 2, 4, 4);
         Fl::set_boxtype(FL_DOWN_BOX, draw_light_fltk_down_box, 2, 2, 4, 4);
         Fl::set_boxtype(FL_DOWN_FRAME, draw_light_fltk_down_frame, 2, 2, 4, 4);
-        if (get_gtk_theme() == "Breeze") {
-            Fl::background(222, 224, 226);
-            Fl::background2(255, 255, 255);
-        } else {
-            Fl::background(224, 224, 224);
-            Fl::background2(255, 255, 255);
-        }
+        Fl::background(224, 224, 224);
+        Fl::background2(255, 255, 255);
     }
     Fl::set_color(FL_SELECTION_COLOR, 7, 59, 165);
 }

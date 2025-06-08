@@ -89,17 +89,9 @@ void VideoWindow::position_in_video(int x, int y, int& x_ret, int& y_ret) const 
 
 void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::Track> track, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
     if (is_dark_mode()) {
-        if (get_gtk_theme() == "Breeze") {
-            SDL_SetRenderDrawColor(renderer, 41, 44, 48, SDL_ALPHA_OPAQUE);
-        } else {
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-        }
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     } else {
-        if (get_gtk_theme() == "Breeze") {
-            SDL_SetRenderDrawColor(renderer, 222, 224, 226, SDL_ALPHA_OPAQUE);
-        } else {
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-        }
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
     }
 
     SDL_Texture* texture = nullptr;
@@ -130,35 +122,15 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                         break;
 
                     case SDL_WINDOWEVENT_FOCUS_LOST:
-                        if (get_gtk_theme() == "Breeze") {
-                            if (is_dark_mode()) {
-                                SDL_SetRenderDrawColor(renderer, 32, 35, 38, SDL_ALPHA_OPAQUE);
-                            } else {
-                                SDL_SetRenderDrawColor(renderer, 239, 240, 241, SDL_ALPHA_OPAQUE);
-                            }
-                            dirty = true;
-                        }
-
                         if (!view_only) {
                             set_keyboard_grab(false);
                         }
-
                         break;
 
                     case SDL_WINDOWEVENT_FOCUS_GAINED:
-                        if (get_gtk_theme() == "Breeze") {
-                            if (is_dark_mode()) {
-                                SDL_SetRenderDrawColor(renderer, 41, 44, 48, SDL_ALPHA_OPAQUE);
-                            } else {
-                                SDL_SetRenderDrawColor(renderer, 222, 224, 226, SDL_ALPHA_OPAQUE);
-                            }
-                            dirty = true;
-                        }
-
                         if (!view_only) {
                             set_keyboard_grab(true);
                         }
-
                         break;
                     }
                     break;
@@ -184,9 +156,16 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                         Uint32 flags = SDL_GetWindowFlags(window);
                         if (flags & SDL_WINDOW_FULLSCREEN) {
                             SDL_SetWindowFullscreen(window, 0);
+                            if (is_dark_mode()) {
+                                SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+                            } else {
+                                SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+                            }
                         } else {
                             SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+                            SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
                         }
+                        dirty = true;
                     } else if (!view_only) {
                         if (event.key.keysym.sym == SDLK_F9) {
                             if (!client_side_mouse) {
