@@ -19,7 +19,7 @@ protected:
     void position_in_video(int x, int y, int& x_ret, int& y_ret) const;
 
 public:
-    SDL_Window* window = nullptr;
+    SDL_Window* window;
     VideoInfo& video_info;
     GstElement* overlay;
     const bool client_side_mouse;
