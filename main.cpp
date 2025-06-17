@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
             GstElement* videosink = gst_element_factory_make("d3d11videosink", nullptr);
 #else
             GstElement* h264dec = gst_element_factory_make("avdec_h264", nullptr);
-            g_object_set(avdec_h264, "direct-rendering", FALSE, nullptr);
+            g_object_set(h264dec, "direct-rendering", FALSE, nullptr);
 
     #ifdef __APPLE__
             GstElement* videosink = gst_element_factory_make("osxvideosink", nullptr);
