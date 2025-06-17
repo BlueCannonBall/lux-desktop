@@ -9,8 +9,9 @@
 #include <FL/Fl.H>
 #include <FL/fl_ask.H>
 #include <SDL2/SDL_main.h>
-#include <gst/app/gstappsink.h>
+#include <SDL2/SDL_syswm.h>
 #include <gst/gst.h>
+#include <gst/video/videooverlay.h>
 #include <inttypes.h>
 #include <memory>
 #include <mutex>
@@ -19,6 +20,7 @@
 #include <string>
 #ifdef _WIN32
     #include <ios>
+    #include <stdint.h>
     #include <stdio.h>
     #include <windows.h>
 #endif
@@ -43,32 +45,29 @@ int main(int argc, char* argv[]) {
     pw::threadpool.resize(0); // The threadpool is only used by Polyweb in server applications
     gst_init(&argc, &argv);
 
-    bool client_side_mouse;
-    bool view_only;
-
     std::shared_ptr<rtc::PeerConnection> conn;
     std::shared_ptr<rtc::Track> video_track;
     std::shared_ptr<rtc::Track> audio_track;
     std::shared_ptr<rtc::DataChannel> ordered_channel;
     std::shared_ptr<rtc::DataChannel> unordered_channel;
 
+    VideoInfo video_info;
+    std::unique_ptr<VideoWindow> video_window;
     glib::Object<GstElement> video_pipeline;
     glib::Object<GstElement> audio_pipeline;
-    Video video;
 
     for (;; conn.reset(),
         video_track.reset(),
         audio_track.reset(),
         ordered_channel.reset(),
         unordered_channel.reset(),
+        video_window.reset(),
         video_pipeline.reset(),
         audio_pipeline.reset()) {
         SetupWindow setup_window;
         if (!setup_window.run()) {
             return 0;
         }
-        client_side_mouse = setup_window.client_side_mouse;
-        view_only = setup_window.view_only;
 
         rtc::Configuration config;
         config.iceServers.emplace_back("stun.l.google.com:19302");
@@ -93,7 +92,7 @@ int main(int argc, char* argv[]) {
             video_track->requestBitrate(bitrate * 1000);
         });
 
-        if (!view_only) {
+        if (!setup_window.view_only) {
             ordered_channel = conn->createDataChannel("ordered-input");
             unordered_channel = conn->createDataChannel("unordered-input",
                 {
@@ -126,7 +125,7 @@ int main(int argc, char* argv[]) {
 
         json req_json = {
             {"password", setup_window.password},
-            {"show_mouse", view_only || !client_side_mouse},
+            {"show_mouse", setup_window.view_only || !setup_window.client_side_mouse},
             {"offer", pw::base64_encode(offer.data(), offer.size())},
         };
 
@@ -176,80 +175,35 @@ int main(int argc, char* argv[]) {
 #ifdef _WIN32
             GstElement* h264parse = gst_element_factory_make("h264parse", nullptr);
 
-            GstElement* d3d11h264dec = gst_element_factory_make("d3d11h264dec", nullptr);
-            {
-                glib::Object<GstPad> pad = gst_element_get_static_pad(d3d11h264dec, "src");
-                gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
-                    auto video = (Video*) data;
-                    GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
-                    if (GST_EVENT_TYPE(event) == GST_EVENT_CAPS) {
-                        GstCaps* caps;
-                        gst_event_parse_caps(event, &caps);
+            GstElement* h264dec = gst_element_factory_make("d3d11h264dec", nullptr);
 
-                        GstStructure* structure = gst_caps_get_structure(caps, 0);
-                        video->mutex.lock();
-                        gst_structure_get_int(structure, "width", &video->width);
-                        gst_structure_get_int(structure, "height", &video->height);
-                        video->resized = true;
-                        video->set_sample(nullptr);
-                        video->mutex.unlock();
-                        video->cv.notify_one();
-                    }
-                    return GST_PAD_PROBE_OK;
-                },
-                    &video,
-                    nullptr);
-            }
+            GstElement* videosink = gst_element_factory_make("d3d11videosink", nullptr);
 #else
-            GstElement* avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
+            GstElement* h264dec = gst_element_factory_make("avdec_h264", nullptr);
             g_object_set(avdec_h264, "direct-rendering", FALSE, nullptr);
-            {
-                glib::Object<GstPad> pad = gst_element_get_static_pad(avdec_h264, "src");
-                gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
-                    auto video = (Video*) data;
-                    GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
-                    if (GST_EVENT_TYPE(event) == GST_EVENT_CAPS) {
-                        GstCaps* caps;
-                        gst_event_parse_caps(event, &caps);
 
-                        GstStructure* structure = gst_caps_get_structure(caps, 0);
-                        video->mutex.lock();
-                        gst_structure_get_int(structure, "width", &video->width);
-                        gst_structure_get_int(structure, "height", &video->height);
-                        video->resized = true;
-                        video->set_sample(nullptr);
-                        video->mutex.unlock();
-                        video->cv.notify_one();
-                    }
-                    return GST_PAD_PROBE_OK;
-                },
-                    &video,
-                    nullptr);
-            }
+            GstElement* videosink = gst_element_factory_make("xvimagesink", nullptr);
 #endif
 
-            GstElement* appsink = gst_element_factory_make("appsink", nullptr);
             {
-                GstCaps* caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "NV12", nullptr);
-                g_object_set(appsink, "caps", caps, "emit-signals", FALSE, "drop", TRUE, "sync", FALSE, "max-buffers", 1, nullptr);
-                gst_caps_unref(caps);
+                glib::Object<GstPad> pad = gst_element_get_static_pad(h264dec, "src");
+                gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
+                    auto video_info = (VideoInfo*) data;
+                    GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
+                    if (GST_EVENT_TYPE(event) == GST_EVENT_CAPS) {
+                        GstCaps* caps;
+                        gst_event_parse_caps(event, &caps);
 
-                GstAppSinkCallbacks callbacks = {
-                    .new_sample = [](GstAppSink* appsink, void* data) {
-                        auto video = (Video*) data;
-
-                        GstSample* sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink));
-                        video->mutex.lock();
-                        video->set_sample(sample);
-                        video->mutex.unlock();
-
-                        SDL_Event event = {.type = VIDEO_FRAME_EVENT};
-                        SDL_PushEvent(&event);
-
-                        return GST_FLOW_OK;
-                    },
-                };
-                gst_app_sink_set_callbacks(GST_APP_SINK(appsink), &callbacks, &video, nullptr);
+                        GstStructure* structure = gst_caps_get_structure(caps, 0);
+                        video_info->mutex.lock();
+                        gst_structure_get_int(structure, "width", &video_info->width);
+                        gst_structure_get_int(structure, "height", &video_info->height);
+                        video_info->mutex.unlock();
+                    }
+                    return GST_PAD_PROBE_OK;
+                },
+                    &video_info,
+                    nullptr);
             }
 
             gst_bin_add_many(GST_BIN(video_pipeline.get()),
@@ -257,26 +211,34 @@ int main(int argc, char* argv[]) {
                 rtph264depay,
 #ifdef _WIN32
                 h264parse,
-                d3d11h264dec,
-#else
-                avdec_h264,
 #endif
-                appsink,
+                h264dec,
+                videosink,
                 nullptr);
             if (!gst_element_link_many(
                     appsrc,
                     rtph264depay,
 #ifdef _WIN32
                     h264parse,
-                    d3d11h264dec,
-#else
-                    avdec_h264,
 #endif
-                    appsink,
+                    h264dec,
+                    videosink,
                     nullptr)) {
                 fl_alert("Failed to link GStreamer elements (video pipeline)");
                 continue;
             }
+
+            video_window = std::make_unique<VideoWindow>(video_info, videosink, setup_window.client_side_mouse, setup_window.view_only);
+
+            SDL_SysWMinfo info;
+            SDL_GetWindowWMInfo(video_window->window, &info);
+
+            gst_video_overlay_handle_events(GST_VIDEO_OVERLAY(videosink), FALSE);
+#ifdef _WIN32
+            gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(videosink), (uintptr_t) info.info.win.window);
+#else
+            gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(videosink), info.info.x11.window);
+#endif
         }
 
         audio_pipeline = gst_pipeline_new(nullptr);
@@ -342,14 +304,7 @@ int main(int argc, char* argv[]) {
         break;
     }
 
-    // Wait for video resolution to be available
-    {
-        std::unique_lock<std::mutex> lock(video.mutex);
-        video.cv.wait(lock);
-    }
-
-    VideoWindow video_window(video, client_side_mouse, view_only);
-    video_window.run(conn, video_track, ordered_channel, unordered_channel);
+    video_window->run(conn, video_track, ordered_channel, unordered_channel);
 
     conn->close();
     gst_element_set_state(video_pipeline.get(), GST_STATE_NULL);

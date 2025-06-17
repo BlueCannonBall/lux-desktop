@@ -14,7 +14,7 @@ static-libraries = [
     "libdatachannel/build/deps/libsrtp/libsrtp2.a",
     "libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a",
 ]
-pkg-config-libraries = ["sdl2", "gstreamer-video-1.0", "gstreamer-app-1.0", "gstreamer-1.0", "gio-2.0", "nice"]
+pkg-config-libraries = ["sdl2", "gstreamer-video-1.0", "gstreamer-1.0", "gio-2.0", "nice"]
 preludes = [
     """ \
         cd fltk && \
@@ -42,4 +42,4 @@ static-libraries = [
     "libdatachannel/build/deps/libsrtp/srtp2.lib",
     "libdatachannel/build/deps/usrsctp/usrsctplib/usrsctp.lib",
 ]
-pkg-config-libraries = ["gstreamer-video-1.0", "gstreamer-app-1.0", "gstreamer-1.0", "nice"]
+pkg-config-libraries = ["gstreamer-video-1.0", "gstreamer-1.0", "nice"]

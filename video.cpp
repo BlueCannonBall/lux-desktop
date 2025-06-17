@@ -1,19 +1,16 @@
 #include "video.hpp"
 #include "json.hpp"
 #include "keys.hpp"
-#include "theme.hpp"
 #include <FL/fl_ask.H>
-#include <gst/video/video.h>
+#include <gst/video/videooverlay.h>
 #include <math.h>
-#include <string.h>
 #if !defined(_WIN32) && !defined(__APPLE__)
     #include <iostream>
     #include <stdlib.h>
+    #include <string.h>
 #endif
 
 using nlohmann::json;
-
-Uint32 VIDEO_FRAME_EVENT = SDL_RegisterEvents(1);
 
 bool is_kde() {
 #if !defined(_WIN32) && !defined(__APPLE__)
@@ -42,60 +39,28 @@ void VideoWindow::set_keyboard_grab(bool grabbed) {
     }
 }
 
-void VideoWindow::letterbox(int& x, int& y, int& width, int& height) const {
-    int window_width;
-    int window_height;
-    SDL_GetRendererOutputSize(renderer, &window_width, &window_height);
-
-    double video_aspect_ratio = (double) video.width / video.height;
-    double window_aspect_ratio = (double) window_width / window_height;
-    if (video_aspect_ratio > window_aspect_ratio) {
-        x = 0;
-        width = window_width;
-        height = ((double) window_width / video.width) * video.height;
-        y = (window_height - height) / 2;
-    } else if (video_aspect_ratio < window_aspect_ratio) {
-        y = 0;
-        width = ((double) window_height / video.height) * video.width;
-        height = window_height;
-        x = (window_width - width) / 2;
-    } else {
-        x = 0;
-        y = 0;
-        width = window_width;
-        height = window_height;
-    }
-}
-
 void VideoWindow::position_in_video(int x, int y, int& x_ret, int& y_ret) const {
     int window_width;
     int window_height;
     SDL_GetWindowSize(window, &window_width, &window_height);
 
-    std::lock_guard<std::mutex> lock(video.mutex);
-    float video_aspect_ratio = (float) video.width / video.height;
+    std::lock_guard<std::mutex> lock(video_info.mutex);
+    float video_aspect_ratio = (float) video_info.width / video_info.height;
     float window_aspect_ratio = (float) window_width / window_height;
     if (video_aspect_ratio > window_aspect_ratio) {
-        x_ret = x / ((float) window_width / video.width);
-        y_ret = (y - ((1.f - window_aspect_ratio / video_aspect_ratio) * window_height / 2.f)) / ((float) window_width / video.width);
+        x_ret = x / ((float) window_width / video_info.width);
+        y_ret = (y - ((1.f - window_aspect_ratio / video_aspect_ratio) * window_height / 2.f)) / ((float) window_width / video_info.width);
     } else if (video_aspect_ratio < window_aspect_ratio) {
-        x_ret = (x - ((1.f - video_aspect_ratio / window_aspect_ratio) * window_width / 2.f)) / ((float) window_height / video.height);
-        y_ret = y / ((float) window_height / video.height);
+        x_ret = (x - ((1.f - video_aspect_ratio / window_aspect_ratio) * window_width / 2.f)) / ((float) window_height / video_info.height);
+        y_ret = y / ((float) window_height / video_info.height);
     } else {
-        x_ret = x / ((float) window_width / video.width);
-        y_ret = y / ((float) window_height / video.height);
+        x_ret = x / ((float) window_width / video_info.width);
+        y_ret = y / ((float) window_height / video_info.height);
     }
 }
 
 void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::Track> track, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
-    if (is_dark_mode()) {
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-    } else {
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-    }
-
-    SDL_Texture* texture = nullptr;
-    for (bool running = true, dirty = true; running;) {
+    for (;;) {
         if (conn->iceState() == rtc::PeerConnection::IceState::Closed ||
             conn->iceState() == rtc::PeerConnection::IceState::Disconnected ||
             conn->iceState() == rtc::PeerConnection::IceState::Failed) {
@@ -113,12 +78,13 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             do {
                 switch (event.type) {
                 case SDL_QUIT:
-                    goto cleanup;
+                    gst_element_set_state(GST_ELEMENT(overlay), GST_STATE_NULL);
+                    return;
 
                 case SDL_WINDOWEVENT:
                     switch (event.window.event) {
                     case SDL_WINDOWEVENT_EXPOSED:
-                        dirty = true;
+                        gst_video_overlay_expose(GST_VIDEO_OVERLAY(overlay));
                         break;
 
                     case SDL_WINDOWEVENT_FOCUS_LOST:
@@ -156,16 +122,9 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                         Uint32 flags = SDL_GetWindowFlags(window);
                         if (flags & SDL_WINDOW_FULLSCREEN) {
                             SDL_SetWindowFullscreen(window, 0);
-                            if (is_dark_mode()) {
-                                SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-                            } else {
-                                SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-                            }
                         } else {
                             SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-                            SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
                         }
-                        dirty = true;
                     } else if (!view_only) {
                         if (event.key.keysym.sym == SDLK_F9) {
                             if (!client_side_mouse) {
@@ -246,39 +205,5 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
                 }
             } while (SDL_PollEvent(&event));
         }
-
-        video.mutex.lock();
-        if (video.sample) {
-            if (video.resized) {
-                SDL_DestroyTexture(texture);
-                texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_NV12, SDL_TEXTUREACCESS_STREAMING, video.width, video.height);
-                video.resized = false;
-            }
-
-            GstVideoInfo info;
-            gst_video_info_from_caps(&info, gst_sample_get_caps(video.sample));
-
-            GstBuffer* buf = gst_sample_get_buffer(video.sample);
-            GstMapInfo map;
-            gst_buffer_map(buf, &map, GST_MAP_READ);
-
-            SDL_UpdateNVTexture(texture, nullptr, map.data + info.offset[0], info.stride[0], map.data + info.offset[1], info.stride[1]);
-            dirty = true;
-
-            gst_buffer_unmap(buf, &map);
-            video.set_sample(nullptr);
-        }
-        video.mutex.unlock();
-
-        if (dirty) {
-            SDL_Rect dest;
-            letterbox(dest.x, dest.y, dest.w, dest.h);
-            SDL_RenderClear(renderer);
-            if (texture) SDL_RenderCopy(renderer, texture, nullptr, &dest);
-            SDL_RenderPresent(renderer);
-            dirty = false;
-        }
     }
-cleanup:
-    SDL_DestroyTexture(texture);
 }
