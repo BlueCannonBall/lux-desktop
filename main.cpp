@@ -236,7 +236,10 @@ int main(int argc, char* argv[]) {
 
             SDL_SysWMinfo info;
             SDL_VERSION(&info.version);
-            SDL_GetWindowWMInfo(video_window->window, &info);
+            if (!SDL_GetWindowWMInfo(video_window->window, &info)) {
+                fl_alert("Failed to obtain SDL window information");
+                continue;
+            }
 
             gst_video_overlay_handle_events(GST_VIDEO_OVERLAY(videosink), FALSE);
 #ifdef _WIN32
