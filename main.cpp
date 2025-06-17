@@ -235,6 +235,7 @@ int main(int argc, char* argv[]) {
             video_window = std::make_unique<VideoWindow>(video_info, videosink, setup_window.client_side_mouse, setup_window.view_only);
 
             SDL_SysWMinfo info;
+            SDL_VERSION(&info.version);
             SDL_GetWindowWMInfo(video_window->window, &info);
 
             gst_video_overlay_handle_events(GST_VIDEO_OVERLAY(videosink), FALSE);
