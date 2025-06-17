@@ -173,6 +173,34 @@ int main(int argc, char* argv[]) {
 
             GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
 
+#ifdef _WIN32
+            GstElement* h264parse = gst_element_factory_make("h264parse", nullptr);
+
+            GstElement* d3d11h264dec = gst_element_factory_make("d3d11h264dec", nullptr);
+            {
+                glib::Object<GstPad> pad = gst_element_get_static_pad(d3d11h264dec, "src");
+                gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
+                    auto video = (Video*) data;
+                    GstEvent* event = GST_PAD_PROBE_INFO_EVENT(info);
+                    if (GST_EVENT_TYPE(event) == GST_EVENT_CAPS) {
+                        GstCaps* caps;
+                        gst_event_parse_caps(event, &caps);
+
+                        GstStructure* structure = gst_caps_get_structure(caps, 0);
+                        video->mutex.lock();
+                        gst_structure_get_int(structure, "width", &video->width);
+                        gst_structure_get_int(structure, "height", &video->height);
+                        video->resized = true;
+                        video->set_sample(nullptr);
+                        video->mutex.unlock();
+                        video->cv.notify_one();
+                    }
+                    return GST_PAD_PROBE_OK;
+                },
+                    &video,
+                    nullptr);
+            }
+#else
             GstElement* avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
             g_object_set(avdec_h264, "direct-rendering", FALSE, nullptr);
             {
@@ -198,12 +226,11 @@ int main(int argc, char* argv[]) {
                     &video,
                     nullptr);
             }
-
-            GstElement* videoconvert = gst_element_factory_make("videoconvert", nullptr);
+#endif
 
             GstElement* appsink = gst_element_factory_make("appsink", nullptr);
             {
-                GstCaps* caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "RGB", nullptr);
+                GstCaps* caps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "NV12", nullptr);
                 g_object_set(appsink, "caps", caps, "emit-signals", FALSE, "drop", TRUE, "sync", FALSE, "max-buffers", 1, nullptr);
                 gst_caps_unref(caps);
 
@@ -228,15 +255,23 @@ int main(int argc, char* argv[]) {
             gst_bin_add_many(GST_BIN(video_pipeline.get()),
                 appsrc,
                 rtph264depay,
+#ifdef _WIN32
+                h264parse,
+                d3d11h264dec,
+#else
                 avdec_h264,
-                videoconvert,
+#endif
                 appsink,
                 nullptr);
             if (!gst_element_link_many(
                     appsrc,
                     rtph264depay,
+#ifdef _WIN32
+                    h264parse,
+                    d3d11h264dec,
+#else
                     avdec_h264,
-                    videoconvert,
+#endif
                     appsink,
                     nullptr)) {
                 fl_alert("Failed to link GStreamer elements (video pipeline)");
