@@ -6,7 +6,7 @@ artifact = "obj"
 install = "/usr/local/bin"
 
 [options]
-compilation-flags = "-Wall -std=c++17 -Ifltk/build -DRTC_STATIC -O3 -march=native -mtune=native -pthread"
+compilation-flags = "-Wall -std=c++17 -Ifltk/build -DRTC_ENABLE_WEBSOCKET=0 -DRTC_STATIC -O3 -march=native -mtune=native -pthread"
 link-time-flags = "`fltk/build/fltk-config --ldstaticflags`"
 libraries = ["ssl", "crypto"]
 static-libraries = [
@@ -23,7 +23,7 @@ preludes = [
     """,
     """ \
         cd libdatachannel && \
-        cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && \
+        cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 -DNO_WEBSOCKET=1 && \
         "$(MAKE)" -C build datachannel-static \
     """,
 ]
@@ -33,7 +33,7 @@ clean-preludes = ["rm -rf fltk/build", "rm -rf libdatachannel/build"]
 library = ["\"$(SDL_ROOT_DIR)\"/lib/x64", "\"$(OPENSSL_ROOT_DIR)\"/lib"]
 
 [env.OS.Windows_NT.options]
-compilation-flags = "/W3 /std:c++20 /EHsc /I\"fltk/build\" /I\"$(SDL_ROOT_DIR)\"/include /I\"$(OPENSSL_ROOT_DIR)\"/include /DRTC_STATIC /Ox"
+compilation-flags = "/W3 /std:c++20 /EHsc /I\"fltk/build\" /I\"$(SDL_ROOT_DIR)\"/include /I\"$(OPENSSL_ROOT_DIR)\"/include /DRTC_ENABLE_WEBSOCKET=0 /DRTC_STATIC /Ox"
 link-time-flags = "/SUBSYSTEM:WINDOWS"
 libraries = ["SDL2.lib", "SDL2main.lib", "libssl.lib", "libcrypto.lib", "crypt32.lib", "iphlpapi.lib", "gdiplus.lib", "shell32.lib", "ole32.lib", "oleaut32.lib", "comdlg32.lib", "winspool.lib", "user32.lib", "bcrypt.lib", "kernel32.lib", "gdi32.lib", "advapi32.lib", "comctl32.lib", "imm32.lib", "ws2_32.lib"]
 static-libraries = [

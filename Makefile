@@ -24,8 +24,8 @@ prelude0:
 .PHONY: prelude0
 
 prelude1:
-	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Executing prelude:  cd libdatachannel && cmake -B build -G \"Unix Makefiles\" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && \"$(MAKE)\" -C build datachannel-static "
-	@ cd libdatachannel && cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && "$(MAKE)" -C build datachannel-static 
+	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Executing prelude:  cd libdatachannel && cmake -B build -G \"Unix Makefiles\" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 -DNO_WEBSOCKET=1 && \"$(MAKE)\" -C build datachannel-static "
+	@ cd libdatachannel && cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 -DNO_WEBSOCKET=1 && "$(MAKE)" -C build datachannel-static 
 .PHONY: prelude1
 
 clean:
