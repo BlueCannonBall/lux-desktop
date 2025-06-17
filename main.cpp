@@ -210,7 +210,7 @@ int main(int argc, char* argv[]) {
                     nullptr);
             }
 
-            g_object_set(videosink, "sync", FALSE, nullptr);
+            g_object_set(videosink, "max-lateness", 0, nullptr);
 
             gst_bin_add_many(GST_BIN(video_pipeline.get()),
                 appsrc,
