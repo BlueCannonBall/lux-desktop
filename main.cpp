@@ -182,7 +182,11 @@ int main(int argc, char* argv[]) {
             GstElement* h264dec = gst_element_factory_make("avdec_h264", nullptr);
             g_object_set(avdec_h264, "direct-rendering", FALSE, nullptr);
 
+    #ifdef __APPLE__
+            GstElement* videosink = gst_element_factory_make("osxvideosink", nullptr);
+    #else
             GstElement* videosink = gst_element_factory_make("xvimagesink", nullptr);
+    #endif
 #endif
 
             {
@@ -236,6 +240,8 @@ int main(int argc, char* argv[]) {
             gst_video_overlay_handle_events(GST_VIDEO_OVERLAY(videosink), FALSE);
 #ifdef _WIN32
             gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(videosink), (uintptr_t) info.info.win.window);
+#elif defined(__APPLE__)
+            gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(videosink), (uintptr_t) info.info.cocoa.window);
 #else
             gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(videosink), info.info.x11.window);
 #endif
