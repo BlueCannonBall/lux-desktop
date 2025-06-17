@@ -78,7 +78,7 @@ void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr
             do {
                 switch (event.type) {
                 case SDL_QUIT:
-                    gst_element_set_state(GST_ELEMENT(overlay), GST_STATE_NULL);
+                    gst_element_set_state(overlay, GST_STATE_NULL);
                     return;
 
                 case SDL_WINDOWEVENT:
