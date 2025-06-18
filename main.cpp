@@ -172,23 +172,8 @@ int main(int argc, char* argv[]) {
 
             GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
 
-#ifdef _WIN32
-            GstElement* h264parse = gst_element_factory_make("h264parse", nullptr);
-
-            GstElement* h264dec = gst_element_factory_make("d3d11h264dec", nullptr);
-
-            GstElement* videosink = gst_element_factory_make("d3d11videosink", nullptr);
-#else
             GstElement* h264dec = gst_element_factory_make("avdec_h264", nullptr);
             g_object_set(h264dec, "direct-rendering", FALSE, nullptr);
-
-    #ifdef __APPLE__
-            GstElement* videosink = gst_element_factory_make("osxvideosink", nullptr);
-    #else
-            GstElement* videosink = gst_element_factory_make("xvimagesink", nullptr);
-    #endif
-#endif
-
             {
                 glib::Object<GstPad> pad = gst_element_get_static_pad(h264dec, "src");
                 gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
@@ -210,23 +195,24 @@ int main(int argc, char* argv[]) {
                     nullptr);
             }
 
+#ifdef _WIN32
+            GstElement* videosink = gst_element_factory_make("d3d11videosink", nullptr);
+#elif defined(__APPLE__)
+            GstElement* videosink = gst_element_factory_make("osxvideosink", nullptr);
+#else
+            GstElement* videosink = gst_element_factory_make("xvimagesink", nullptr);
+#endif
             g_object_set(videosink, "max-lateness", 0, nullptr);
 
             gst_bin_add_many(GST_BIN(video_pipeline.get()),
                 appsrc,
                 rtph264depay,
-#ifdef _WIN32
-                h264parse,
-#endif
                 h264dec,
                 videosink,
                 nullptr);
             if (!gst_element_link_many(
                     appsrc,
                     rtph264depay,
-#ifdef _WIN32
-                    h264parse,
-#endif
                     h264dec,
                     videosink,
                     nullptr)) {
