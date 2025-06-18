@@ -26,7 +26,7 @@ ifeq ($(OS),Windows_NT)
 endif
 
 compiler := $(CXX)
-compilation_flags := -Wall -std=c++17 -Ifltk/build -DRTC_ENABLE_WEBSOCKET=0 -DRTC_STATIC -O3 -march=native -mtune=native -pthread $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags sdl2 gstreamer-video-1.0 gstreamer-1.0 gio-2.0 nice`
+compilation_flags := -Wall -std=c++17 -Ifltk/build -DRTC_ENABLE_WEBSOCKET=0 -DRTC_STATIC -O3 -pthread $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags sdl2 gstreamer-video-1.0 gstreamer-1.0 gio-2.0 nice`
 link_time_flags := `fltk/build/fltk-config --ldstaticflags`
 libraries := $(library_flag)ssl $(library_flag)crypto `pkg-config $(pkg_config_syntax) --libs sdl2 gstreamer-video-1.0 gstreamer-1.0 gio-2.0 nice`
 static_libraries := libdatachannel/build/libdatachannel-static.a libdatachannel/build/deps/libsrtp/libsrtp2.a libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a

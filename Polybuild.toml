@@ -6,7 +6,7 @@ artifact = "obj"
 install = "/usr/local/bin"
 
 [options]
-compilation-flags = "-Wall -std=c++17 -Ifltk/build -DRTC_ENABLE_WEBSOCKET=0 -DRTC_STATIC -O3 -march=native -mtune=native -pthread"
+compilation-flags = "-Wall -std=c++17 -Ifltk/build -DRTC_ENABLE_WEBSOCKET=0 -DRTC_STATIC -O3 -pthread"
 link-time-flags = "`fltk/build/fltk-config --ldstaticflags`"
 libraries = ["ssl", "crypto"]
 static-libraries = [
