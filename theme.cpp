@@ -178,7 +178,9 @@ void configure_fltk_colors() {
 
 #ifdef _WIN32
 void enable_dark_mode(HWND window) {
-    BOOL value = TRUE;
-    DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof value);
+    if (is_dark_mode()) {
+        BOOL value = TRUE;
+        DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof value);
+    }
 }
 #endif
