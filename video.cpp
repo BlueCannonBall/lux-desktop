@@ -12,14 +12,12 @@
 
 using nlohmann::json;
 
-bool is_kde() {
 #if !defined(_WIN32) && !defined(__APPLE__)
+static bool is_kde() {
     char* xdg_current_desktop;
     return (xdg_current_desktop = getenv("XDG_CURRENT_DESKTOP")) && !strcmp(xdg_current_desktop, "KDE");
-#else
-    return false;
-#endif
 }
+#endif
 
 void VideoWindow::set_keyboard_grab(bool grabbed) {
     if (grabbed) {

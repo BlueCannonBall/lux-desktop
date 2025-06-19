@@ -34,7 +34,7 @@ bool is_dark_mode() {
 }
 
 static void draw_dark_fltk_up_frame(int x, int y, int w, int h, Fl_Color c) {
-    Fl::set_box_color(fl_color_average(FL_WHITE, FL_BACKGROUND2_COLOR, 0.25f));
+    Fl::set_box_color(fl_color_average(FL_WHITE, FL_BACKGROUND2_COLOR, 0.3f));
     fl_begin_loop();
     fl_vertex(x, y + 2);
     fl_vertex(x + 2, y);
@@ -50,18 +50,22 @@ static void draw_dark_fltk_up_frame(int x, int y, int w, int h, Fl_Color c) {
 static void draw_dark_fltk_up_box(int x, int y, int w, int h, Fl_Color c) {
     draw_dark_fltk_up_frame(x, y, w, h, c);
 
-    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.075f));
-    fl_xyline(x + 2, y + 1, x + w - 3);
     Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.05f));
-    fl_xyline(x + 1, y + 2, x + w - 2);
-    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.25f));
-    fl_xyline(x + 2, y + h - 2, x + w - 3);
-    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.225f));
-    fl_xyline(x + 1, y + h - 3, x + w - 2);
+    fl_xyline(x + 2, y + 1, x + w - 3);
+    fl_yxline(x + 1, y + 2, y + h - 3);
+    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.03f));
+    fl_xyline(x + 2, y + 2, x + w - 3);
+    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.015f));
+    fl_xyline(x + 2, y + 3, x + w - 3);
     Fl::set_box_color(c);
-    fl_yxline(x + 1, y + 3, y + h - 4);
-    fl_yxline(x + w - 2, y + 3, y + h - 4);
-    fl_rectf(x + 2, y + 3, w - 4, h - 6);
+    fl_rectf(x + 2, y + 4, w - 4, h - 6);
+    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.15f));
+    fl_xyline(x + 2, y + h - 4, x + w - 3);
+    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.3f));
+    fl_xyline(x + 2, y + h - 3, x + w - 3);
+    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.5f));
+    fl_xyline(x + 2, y + h - 2, x + w - 3);
+    fl_yxline(x + w - 2, y + 2, y + h - 3);
 }
 
 static void draw_dark_fltk_down_frame(int x, int y, int w, int h, Fl_Color c) {
@@ -177,10 +181,8 @@ void configure_fltk_colors() {
 }
 
 #ifdef _WIN32
-void enable_dark_mode(HWND window) {
-    if (is_dark_mode()) {
-        BOOL value = TRUE;
-        DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof value);
-    }
+void set_window_dark_mode(HWND window, bool value) {
+    BOOL use_immersive_dark_mode = value;
+    DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE, &use_immersive_dark_mode, sizeof use_immersive_dark_mode);
 }
 #endif

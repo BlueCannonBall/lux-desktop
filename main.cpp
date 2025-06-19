@@ -231,7 +231,7 @@ int main(int argc, char* argv[]) {
 
             gst_video_overlay_handle_events(GST_VIDEO_OVERLAY(videosink), FALSE);
 #ifdef _WIN32
-            enable_dark_mode(info.info.win.window);
+            set_window_dark_mode(info.info.win.window);
             gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(videosink), (uintptr_t) info.info.win.window);
 #elif defined(__APPLE__)
             gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(videosink), (uintptr_t) info.info.cocoa.window);

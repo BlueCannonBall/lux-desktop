@@ -28,7 +28,7 @@ public:
     bool run() {
         show();
 #ifdef _WIN32
-        enable_dark_mode(fl_xid(this));
+        set_window_dark_mode(fl_xid(this));
 #endif
         while (shown()) {
             Fl::wait();

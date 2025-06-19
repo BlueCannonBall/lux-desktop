@@ -10,5 +10,5 @@ bool is_dark_mode();
 std::string get_gtk_theme();
 void configure_fltk_colors();
 #ifdef _WIN32
-void enable_dark_mode(HWND window);
+void set_window_dark_mode(HWND window, bool value = is_dark_mode());
 #endif
