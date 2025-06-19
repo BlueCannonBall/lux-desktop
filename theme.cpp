@@ -50,18 +50,20 @@ static void draw_dark_fltk_up_frame(int x, int y, int w, int h, Fl_Color c) {
 static void draw_dark_fltk_up_box(int x, int y, int w, int h, Fl_Color c) {
     draw_dark_fltk_up_frame(x, y, w, h, c);
 
-    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.05f));
+    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.1f));
     fl_xyline(x + 2, y + 1, x + w - 3);
     fl_yxline(x + 1, y + 2, y + h - 3);
-    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.03f));
+    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.05f));
     fl_xyline(x + 2, y + 2, x + w - 3);
-    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.015f));
+    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.025f));
     fl_xyline(x + 2, y + 3, x + w - 3);
     Fl::set_box_color(c);
-    fl_rectf(x + 2, y + 4, w - 4, h - 6);
-    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.15f));
+    fl_rectf(x + 2, y + 4, w - 4, h - 7);
+    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.1f));
+    fl_xyline(x + 2, y + h - 5, x + w - 3);
+    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.2f));
     fl_xyline(x + 2, y + h - 4, x + w - 3);
-    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.3f));
+    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.4f));
     fl_xyline(x + 2, y + h - 3, x + w - 3);
     Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.5f));
     fl_xyline(x + 2, y + h - 2, x + w - 3);
