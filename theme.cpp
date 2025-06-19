@@ -1,30 +1,40 @@
 #include "theme.hpp"
 #include <FL/Fl.H>
 #include <FL/fl_draw.H>
-#ifndef _WIN32
+#ifdef _WIN32
+    #include <dwmapi.h>
+#else
     #include "glib.hpp"
     #include <gio/gio.h>
     #include <string.h>
 #endif
 
 bool is_dark_mode() {
-#ifndef _WIN32
+#ifdef _WIN32
+    if (HKEY key; RegOpenKeyEx(
+                      HKEY_CURRENT_USER,
+                      "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+                      0,
+                      KEY_READ,
+                      &key) == ERROR_SUCCESS) {
+        if (DWORD value, size = sizeof(value); RegQueryValueExA(key, "AppsUseLightTheme", nullptr, nullptr, (LPBYTE) &value, &size) == ERROR_SUCCESS) {
+            RegCloseKey(key);
+            return !value;
+        }
+        RegCloseKey(key);
+    }
+    return false;
+#else
     glib::Object<GSettings> settings = g_settings_new("org.gnome.desktop.interface");
     char* theme = g_settings_get_string(settings.get(), "color-scheme");
     bool ret = strcmp(theme, "default") && strcmp(theme, "prefer-light");
     g_free(theme);
     return ret;
-#else
-    return false;
 #endif
 }
 
 static void draw_dark_fltk_up_frame(int x, int y, int w, int h, Fl_Color c) {
-    Fl::set_box_color(fl_color_average(fl_rgb_color(79), c, 0.5f));
-    fl_xyline(x + 2, y + 1, x + w - 3);
-    fl_yxline(x + 1, y + 2, y + h - 3);
-
-    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.65f));
+    Fl::set_box_color(fl_color_average(FL_WHITE, FL_BACKGROUND2_COLOR, 0.25f));
     fl_begin_loop();
     fl_vertex(x, y + 2);
     fl_vertex(x + 2, y);
@@ -40,25 +50,22 @@ static void draw_dark_fltk_up_frame(int x, int y, int w, int h, Fl_Color c) {
 static void draw_dark_fltk_up_box(int x, int y, int w, int h, Fl_Color c) {
     draw_dark_fltk_up_frame(x, y, w, h, c);
 
-    Fl::set_box_color(fl_color_average(fl_rgb_color(79), c, 0.4f));
-    fl_xyline(x + 2, y + 2, x + w - 3);
-    Fl::set_box_color(fl_color_average(fl_rgb_color(79), c, 0.2f));
-    fl_xyline(x + 2, y + 3, x + w - 3);
-    Fl::set_box_color(fl_color_average(fl_rgb_color(79), c, 0.1f));
-    fl_xyline(x + 2, y + 4, x + w - 3);
-    Fl::set_box_color(c);
-    fl_rectf(x + 2, y + 5, w - 4, h - 7);
-    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.025f));
-    fl_xyline(x + 2, y + h - 4, x + w - 3);
-    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.05f));
-    fl_xyline(x + 2, y + h - 3, x + w - 3);
-    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.1f));
+    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.075f));
+    fl_xyline(x + 2, y + 1, x + w - 3);
+    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.05f));
+    fl_xyline(x + 1, y + 2, x + w - 2);
+    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.25f));
     fl_xyline(x + 2, y + h - 2, x + w - 3);
-    fl_yxline(x + w - 2, y + 2, y + h - 3);
+    Fl::set_box_color(fl_color_average(FL_BLACK, c, 0.225f));
+    fl_xyline(x + 1, y + h - 3, x + w - 2);
+    Fl::set_box_color(c);
+    fl_yxline(x + 1, y + 3, y + h - 4);
+    fl_yxline(x + w - 2, y + 3, y + h - 4);
+    fl_rectf(x + 2, y + 3, w - 4, h - 6);
 }
 
 static void draw_dark_fltk_down_frame(int x, int y, int w, int h, Fl_Color c) {
-    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.175f));
+    Fl::set_box_color(fl_color_average(FL_WHITE, c, 0.25f));
     fl_begin_loop();
     fl_vertex(x, y + 2);
     fl_vertex(x + 2, y);
@@ -168,3 +175,10 @@ void configure_fltk_colors() {
     }
     Fl::set_color(FL_SELECTION_COLOR, 7, 59, 165);
 }
+
+#ifdef _WIN32
+void enable_dark_mode(HWND window) {
+    BOOL value = TRUE;
+    DwmSetWindowAttribute(window, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
+}
+#endif

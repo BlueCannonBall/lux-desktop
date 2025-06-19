@@ -1,3 +1,5 @@
+#define NOMINMAX
+
 #include "setup.hpp"
 #include "json.hpp"
 #include <FL/Fl_Box.H>

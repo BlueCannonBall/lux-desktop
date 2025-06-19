@@ -1,11 +1,13 @@
 #pragma once
 
+#include "theme.hpp"
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Check_Button.H>
 #include <FL/Fl_Double_Window.H>
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Secret_Input.H>
 #include <FL/Fl_Spinner.H>
+#include <FL/x.H>
 #include <filesystem>
 #include <string>
 
@@ -25,6 +27,9 @@ public:
 
     bool run() {
         show();
+#ifdef _WIN32
+        enable_dark_mode(fl_xid(this));
+#endif
         while (shown()) {
             Fl::wait();
         }
