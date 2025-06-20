@@ -34,7 +34,7 @@ bool is_dark_mode() {
 }
 
 static void draw_dark_fltk_up_frame(int x, int y, int w, int h, Fl_Color c) {
-    Fl::set_box_color(fl_color_average(FL_WHITE, FL_BACKGROUND2_COLOR, 0.3f));
+    Fl::set_box_color(fl_color_average(FL_WHITE, FL_BACKGROUND2_COLOR, 0.25f));
     fl_begin_loop();
     fl_vertex(x, y + 2);
     fl_vertex(x + 2, y);
