@@ -19,8 +19,8 @@ all: prelude0 prelude1
 .PHONY: all
 
 prelude0:
-	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Executing prelude:  cd fltk && cmake . -B build -G \"Unix Makefiles\" -DCMAKE_BUILD_TYPE=Release -DFLTK_BUILD_TEST=OFF && \"$(MAKE)\" -C build "
-	@ cd fltk && cmake . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DFLTK_BUILD_TEST=OFF && "$(MAKE)" -C build 
+	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Executing prelude:  cd fltk && cmake . -B build -G \"Unix Makefiles\" -DCMAKE_BUILD_TYPE=Release -DFLTK_BACKEND_WAYLAND=OFF -DFLTK_BUILD_TEST=OFF && \"$(MAKE)\" -C build "
+	@ cd fltk && cmake . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DFLTK_BACKEND_WAYLAND=OFF -DFLTK_BUILD_TEST=OFF && "$(MAKE)" -C build 
 .PHONY: prelude0
 
 prelude1:

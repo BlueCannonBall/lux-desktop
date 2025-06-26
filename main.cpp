@@ -23,6 +23,8 @@
     #include <stdint.h>
     #include <stdio.h>
     #include <windows.h>
+#elif !defined(__APPLE__)
+    #include <stdlib.h>
 #endif
 
 using nlohmann::json;
@@ -36,6 +38,8 @@ int main(int argc, char* argv[]) {
         freopen_s(&fp, "CONIN$", "r", stdin);
         std::ios::sync_with_stdio();
     }
+#elif !defined(__APPLE__)
+    unsetenv("WAYLAND_DISPLAY");
 #endif
 
     Fl::visual(FL_DOUBLE | FL_INDEX);
@@ -202,7 +206,7 @@ int main(int argc, char* argv[]) {
 #else
             GstElement* videosink = gst_element_factory_make("xvimagesink", nullptr);
 #endif
-            g_object_set(videosink, "max-lateness", 0, nullptr);
+            g_object_set(videosink, "sync", FALSE, nullptr);
 
             gst_bin_add_many(GST_BIN(video_pipeline.get()),
                 appsrc,

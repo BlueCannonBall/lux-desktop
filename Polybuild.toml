@@ -18,7 +18,7 @@ pkg-config-libraries = ["sdl2", "gstreamer-video-1.0", "gstreamer-1.0", "gio-2.0
 preludes = [
     """ \
         cd fltk && \
-        cmake . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DFLTK_BUILD_TEST=OFF && \
+        cmake . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DFLTK_BACKEND_WAYLAND=OFF -DFLTK_BUILD_TEST=OFF && \
         "$(MAKE)" -C build \
     """,
     """ \
