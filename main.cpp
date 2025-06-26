@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
         std::ios::sync_with_stdio();
     }
 #elif !defined(__APPLE__)
-    unsetenv("WAYLAND_DISPLAY");
+    unsetenv("WAYLAND_DISPLAY"); // The video can't be displayed efficiently on Wayland, so Xwayland is forced
 #endif
 
     Fl::visual(FL_DOUBLE | FL_INDEX);
