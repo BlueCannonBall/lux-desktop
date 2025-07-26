@@ -200,7 +200,10 @@ int main(int argc, char* argv[]) {
             }
 
 #ifdef _WIN32
-            GstElement* videosink = gst_element_factory_make("d3d11videosink", nullptr);
+            GstElement* videosink;
+            if (!(video_sink = gst_element_factory_make("d3d12videosink", nullptr))) {
+                videosink = gst_element_factory_make("d3d11videosink", nullptr);
+            }
 #elif defined(__APPLE__)
             GstElement* videosink = gst_element_factory_make("osxvideosink", nullptr);
 #else
