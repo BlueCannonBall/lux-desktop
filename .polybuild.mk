@@ -48,7 +48,7 @@ endif
 all: lux-desktop$(out_ext)
 .PHONY: all
 
-obj/keys_0$(obj_ext): ./keys.cpp ./keys.hpp
+obj/video_0$(obj_ext): ./video.cpp ./video.hpp libdatachannel/include/rtc/rtc.hpp libdatachannel/include/rtc/rtc.h libdatachannel/include/rtc/version.h libdatachannel/include/rtc/common.hpp libdatachannel/include/rtc/utils.hpp libdatachannel/include/rtc/global.hpp libdatachannel/include/rtc/datachannel.hpp libdatachannel/include/rtc/channel.hpp libdatachannel/include/rtc/reliability.hpp libdatachannel/include/rtc/peerconnection.hpp libdatachannel/include/rtc/candidate.hpp libdatachannel/include/rtc/configuration.hpp libdatachannel/include/rtc/description.hpp libdatachannel/include/rtc/track.hpp libdatachannel/include/rtc/mediahandler.hpp libdatachannel/include/rtc/message.hpp libdatachannel/include/rtc/frameinfo.hpp libdatachannel/include/rtc/iceudpmuxlistener.hpp libdatachannel/include/rtc/websocket.hpp libdatachannel/include/rtc/websocketserver.hpp libdatachannel/include/rtc/av1rtppacketizer.hpp libdatachannel/include/rtc/nalunit.hpp libdatachannel/include/rtc/rtppacketizer.hpp libdatachannel/include/rtc/rtppacketizationconfig.hpp libdatachannel/include/rtc/dependencydescriptor.hpp libdatachannel/include/rtc/rtp.hpp libdatachannel/include/rtc/h264rtppacketizer.hpp libdatachannel/include/rtc/h264rtpdepacketizer.hpp libdatachannel/include/rtc/rtpdepacketizer.hpp libdatachannel/include/rtc/h265rtppacketizer.hpp libdatachannel/include/rtc/h265nalunit.hpp libdatachannel/include/rtc/h265rtpdepacketizer.hpp libdatachannel/include/rtc/plihandler.hpp libdatachannel/include/rtc/rembhandler.hpp libdatachannel/include/rtc/pacinghandler.hpp libdatachannel/include/rtc/rtcpnackresponder.hpp libdatachannel/include/rtc/rtcpreceivingsession.hpp libdatachannel/include/rtc/rtcpsrreporter.hpp ./json.hpp ./keys.hpp fltk/FL/fl_ask.H fltk/FL/Enumerations.H fltk/FL/Fl_Export.H fltk/FL/fl_types.h fltk/FL/fl_attr.h fltk/FL/platform_types.h
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Compiling $@ from $<..."
 	@mkdir -p obj
 	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
@@ -60,13 +60,13 @@ obj/setup_0$(obj_ext): ./setup.cpp ./setup.hpp ./theme.hpp fltk/FL/Fl_Button.H f
 	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Finished compiling $@ from $<!"
 
-obj/theme_0$(obj_ext): ./theme.cpp ./theme.hpp fltk/FL/Fl.H fltk/FL/Fl_Export.H fltk/FL/platform_types.h fltk/FL/fl_casts.H fltk/FL/Fl_Cairo.H fltk/FL/fl_utf8.h fltk/FL/fl_types.h fltk/FL/fl_attr.h fltk/FL/Enumerations.H fltk/FL/fl_draw.H fltk/FL/Fl_Graphics_Driver.H fltk/FL/Fl_Device.H fltk/FL/Fl_Plugin.H fltk/FL/Fl_Preferences.H fltk/FL/Fl_Image.H fltk/FL/Fl_Widget.H fltk/FL/Fl_Bitmap.H fltk/FL/Fl_Pixmap.H fltk/FL/Fl_RGB_Image.H fltk/FL/Fl_Rect.H ./glib.hpp
+obj/keys_0$(obj_ext): ./keys.cpp ./keys.hpp
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Compiling $@ from $<..."
 	@mkdir -p obj
 	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Finished compiling $@ from $<!"
 
-obj/main_0$(obj_ext): ./main.cpp ./Polyweb/polyweb.hpp ./Polyweb/Polynet/polynet.hpp ./Polyweb/Polynet/string.hpp ./Polyweb/Polynet/secure_sockets.hpp ./Polyweb/Polynet/smart_sockets.hpp ./Polyweb/string.hpp ./Polyweb/threadpool.hpp ./glib.hpp ./json.hpp ./media_receiver.hpp libdatachannel/include/rtc/rtc.hpp libdatachannel/include/rtc/rtc.h libdatachannel/include/rtc/version.h libdatachannel/include/rtc/common.hpp libdatachannel/include/rtc/utils.hpp libdatachannel/include/rtc/global.hpp libdatachannel/include/rtc/datachannel.hpp libdatachannel/include/rtc/channel.hpp libdatachannel/include/rtc/reliability.hpp libdatachannel/include/rtc/peerconnection.hpp libdatachannel/include/rtc/candidate.hpp libdatachannel/include/rtc/configuration.hpp libdatachannel/include/rtc/description.hpp libdatachannel/include/rtc/track.hpp libdatachannel/include/rtc/mediahandler.hpp libdatachannel/include/rtc/message.hpp libdatachannel/include/rtc/frameinfo.hpp libdatachannel/include/rtc/iceudpmuxlistener.hpp libdatachannel/include/rtc/websocket.hpp libdatachannel/include/rtc/websocketserver.hpp libdatachannel/include/rtc/av1rtppacketizer.hpp libdatachannel/include/rtc/nalunit.hpp libdatachannel/include/rtc/rtppacketizer.hpp libdatachannel/include/rtc/rtppacketizationconfig.hpp libdatachannel/include/rtc/dependencydescriptor.hpp libdatachannel/include/rtc/rtp.hpp libdatachannel/include/rtc/h264rtppacketizer.hpp libdatachannel/include/rtc/h264rtpdepacketizer.hpp libdatachannel/include/rtc/rtpdepacketizer.hpp libdatachannel/include/rtc/h265rtppacketizer.hpp libdatachannel/include/rtc/h265nalunit.hpp libdatachannel/include/rtc/h265rtpdepacketizer.hpp libdatachannel/include/rtc/plihandler.hpp libdatachannel/include/rtc/rembhandler.hpp libdatachannel/include/rtc/pacinghandler.hpp libdatachannel/include/rtc/rtcpnackresponder.hpp libdatachannel/include/rtc/rtcpreceivingsession.hpp libdatachannel/include/rtc/rtcpsrreporter.hpp ./setup.hpp ./theme.hpp fltk/FL/Fl_Button.H fltk/FL/Fl_Widget.H fltk/FL/Fl.H fltk/FL/Fl_Export.H fltk/FL/platform_types.h fltk/FL/fl_casts.H fltk/FL/Fl_Cairo.H fltk/FL/fl_utf8.h fltk/FL/fl_types.h fltk/FL/fl_attr.h fltk/FL/Enumerations.H fltk/FL/Fl_Check_Button.H fltk/FL/Fl_Light_Button.H fltk/FL/Fl_Double_Window.H fltk/FL/Fl_Window.H fltk/FL/Fl_Group.H fltk/FL/Fl_Bitmap.H fltk/FL/Fl_Image.H fltk/FL/Fl_Input.H fltk/FL/Fl_Input_.H fltk/FL/Fl_Secret_Input.H fltk/FL/Fl_Spinner.H fltk/FL/Fl_Repeat_Button.H fltk/FL/x.H fltk/FL/platform.H fltk/FL/win32.H fltk/FL/wayland.H fltk/FL/x11.H fltk/FL/mac.H ./video.hpp ./waiter.hpp fltk/FL/fl_ask.H
+obj/theme_0$(obj_ext): ./theme.cpp ./theme.hpp fltk/FL/Fl.H fltk/FL/Fl_Export.H fltk/FL/platform_types.h fltk/FL/fl_casts.H fltk/FL/Fl_Cairo.H fltk/FL/fl_utf8.h fltk/FL/fl_types.h fltk/FL/fl_attr.h fltk/FL/Enumerations.H fltk/FL/fl_draw.H fltk/FL/Fl_Graphics_Driver.H fltk/FL/Fl_Device.H fltk/FL/Fl_Plugin.H fltk/FL/Fl_Preferences.H fltk/FL/Fl_Image.H fltk/FL/Fl_Widget.H fltk/FL/Fl_Bitmap.H fltk/FL/Fl_Pixmap.H fltk/FL/Fl_RGB_Image.H fltk/FL/Fl_Rect.H ./glib.hpp
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Compiling $@ from $<..."
 	@mkdir -p obj
 	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
@@ -78,13 +78,25 @@ obj/media_receiver_0$(obj_ext): ./media_receiver.cpp ./media_receiver.hpp libdat
 	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Finished compiling $@ from $<!"
 
-obj/video_0$(obj_ext): ./video.cpp ./video.hpp libdatachannel/include/rtc/rtc.hpp libdatachannel/include/rtc/rtc.h libdatachannel/include/rtc/version.h libdatachannel/include/rtc/common.hpp libdatachannel/include/rtc/utils.hpp libdatachannel/include/rtc/global.hpp libdatachannel/include/rtc/datachannel.hpp libdatachannel/include/rtc/channel.hpp libdatachannel/include/rtc/reliability.hpp libdatachannel/include/rtc/peerconnection.hpp libdatachannel/include/rtc/candidate.hpp libdatachannel/include/rtc/configuration.hpp libdatachannel/include/rtc/description.hpp libdatachannel/include/rtc/track.hpp libdatachannel/include/rtc/mediahandler.hpp libdatachannel/include/rtc/message.hpp libdatachannel/include/rtc/frameinfo.hpp libdatachannel/include/rtc/iceudpmuxlistener.hpp libdatachannel/include/rtc/websocket.hpp libdatachannel/include/rtc/websocketserver.hpp libdatachannel/include/rtc/av1rtppacketizer.hpp libdatachannel/include/rtc/nalunit.hpp libdatachannel/include/rtc/rtppacketizer.hpp libdatachannel/include/rtc/rtppacketizationconfig.hpp libdatachannel/include/rtc/dependencydescriptor.hpp libdatachannel/include/rtc/rtp.hpp libdatachannel/include/rtc/h264rtppacketizer.hpp libdatachannel/include/rtc/h264rtpdepacketizer.hpp libdatachannel/include/rtc/rtpdepacketizer.hpp libdatachannel/include/rtc/h265rtppacketizer.hpp libdatachannel/include/rtc/h265nalunit.hpp libdatachannel/include/rtc/h265rtpdepacketizer.hpp libdatachannel/include/rtc/plihandler.hpp libdatachannel/include/rtc/rembhandler.hpp libdatachannel/include/rtc/pacinghandler.hpp libdatachannel/include/rtc/rtcpnackresponder.hpp libdatachannel/include/rtc/rtcpreceivingsession.hpp libdatachannel/include/rtc/rtcpsrreporter.hpp ./json.hpp ./keys.hpp fltk/FL/fl_ask.H fltk/FL/Enumerations.H fltk/FL/Fl_Export.H fltk/FL/fl_types.h fltk/FL/fl_attr.h fltk/FL/platform_types.h
+obj/main_0$(obj_ext): ./main.cpp ./Polyweb/polyweb.hpp ./Polyweb/Polynet/polynet.hpp ./Polyweb/Polynet/string.hpp ./Polyweb/Polynet/secure_sockets.hpp ./Polyweb/Polynet/smart_sockets.hpp ./Polyweb/string.hpp ./Polyweb/threadpool.hpp ./glib.hpp ./json.hpp ./media_receiver.hpp libdatachannel/include/rtc/rtc.hpp libdatachannel/include/rtc/rtc.h libdatachannel/include/rtc/version.h libdatachannel/include/rtc/common.hpp libdatachannel/include/rtc/utils.hpp libdatachannel/include/rtc/global.hpp libdatachannel/include/rtc/datachannel.hpp libdatachannel/include/rtc/channel.hpp libdatachannel/include/rtc/reliability.hpp libdatachannel/include/rtc/peerconnection.hpp libdatachannel/include/rtc/candidate.hpp libdatachannel/include/rtc/configuration.hpp libdatachannel/include/rtc/description.hpp libdatachannel/include/rtc/track.hpp libdatachannel/include/rtc/mediahandler.hpp libdatachannel/include/rtc/message.hpp libdatachannel/include/rtc/frameinfo.hpp libdatachannel/include/rtc/iceudpmuxlistener.hpp libdatachannel/include/rtc/websocket.hpp libdatachannel/include/rtc/websocketserver.hpp libdatachannel/include/rtc/av1rtppacketizer.hpp libdatachannel/include/rtc/nalunit.hpp libdatachannel/include/rtc/rtppacketizer.hpp libdatachannel/include/rtc/rtppacketizationconfig.hpp libdatachannel/include/rtc/dependencydescriptor.hpp libdatachannel/include/rtc/rtp.hpp libdatachannel/include/rtc/h264rtppacketizer.hpp libdatachannel/include/rtc/h264rtpdepacketizer.hpp libdatachannel/include/rtc/rtpdepacketizer.hpp libdatachannel/include/rtc/h265rtppacketizer.hpp libdatachannel/include/rtc/h265nalunit.hpp libdatachannel/include/rtc/h265rtpdepacketizer.hpp libdatachannel/include/rtc/plihandler.hpp libdatachannel/include/rtc/rembhandler.hpp libdatachannel/include/rtc/pacinghandler.hpp libdatachannel/include/rtc/rtcpnackresponder.hpp libdatachannel/include/rtc/rtcpreceivingsession.hpp libdatachannel/include/rtc/rtcpsrreporter.hpp ./setup.hpp ./theme.hpp fltk/FL/Fl_Button.H fltk/FL/Fl_Widget.H fltk/FL/Fl.H fltk/FL/Fl_Export.H fltk/FL/platform_types.h fltk/FL/fl_casts.H fltk/FL/Fl_Cairo.H fltk/FL/fl_utf8.h fltk/FL/fl_types.h fltk/FL/fl_attr.h fltk/FL/Enumerations.H fltk/FL/Fl_Check_Button.H fltk/FL/Fl_Light_Button.H fltk/FL/Fl_Double_Window.H fltk/FL/Fl_Window.H fltk/FL/Fl_Group.H fltk/FL/Fl_Bitmap.H fltk/FL/Fl_Image.H fltk/FL/Fl_Input.H fltk/FL/Fl_Input_.H fltk/FL/Fl_Secret_Input.H fltk/FL/Fl_Spinner.H fltk/FL/Fl_Repeat_Button.H fltk/FL/x.H fltk/FL/platform.H fltk/FL/win32.H fltk/FL/wayland.H fltk/FL/x11.H fltk/FL/mac.H ./video.hpp ./waiter.hpp fltk/FL/fl_ask.H
+	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Compiling $@ from $<..."
+	@mkdir -p obj
+	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
+	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Finished compiling $@ from $<!"
+
+obj/client_0$(obj_ext): Polyweb/client.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/string.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Compiling $@ from $<..."
 	@mkdir -p obj
 	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Finished compiling $@ from $<!"
 
 obj/server_0$(obj_ext): Polyweb/server.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/string.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
+	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Compiling $@ from $<..."
+	@mkdir -p obj
+	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
+	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Finished compiling $@ from $<!"
+
+obj/websocket_0$(obj_ext): Polyweb/websocket.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/string.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Compiling $@ from $<..."
 	@mkdir -p obj
 	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
@@ -102,18 +114,6 @@ obj/polyweb_0$(obj_ext): Polyweb/polyweb.cpp Polyweb/polyweb.hpp Polyweb/Polynet
 	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Finished compiling $@ from $<!"
 
-obj/websocket_0$(obj_ext): Polyweb/websocket.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/string.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
-	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Compiling $@ from $<..."
-	@mkdir -p obj
-	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
-	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Finished compiling $@ from $<!"
-
-obj/client_0$(obj_ext): Polyweb/client.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/string.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
-	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Compiling $@ from $<..."
-	@mkdir -p obj
-	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
-	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Finished compiling $@ from $<!"
-
 obj/polynet_0$(obj_ext): Polyweb/Polynet/polynet.cpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/string.hpp Polyweb/Polynet/secure_sockets.hpp
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Compiling $@ from $<..."
 	@mkdir -p obj
@@ -126,7 +126,7 @@ obj/secure_sockets_0$(obj_ext): Polyweb/Polynet/secure_sockets.cpp Polyweb/Polyn
 	@"$(cpp_compiler)" $(compile_only_flag) $< $(cpp_compilation_flags) $(obj_path_flag)$@
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Finished compiling $@ from $<!"
 
-lux-desktop$(out_ext): obj/keys_0$(obj_ext) obj/setup_0$(obj_ext) obj/theme_0$(obj_ext) obj/main_0$(obj_ext) obj/media_receiver_0$(obj_ext) obj/video_0$(obj_ext) obj/server_0$(obj_ext) obj/string_0$(obj_ext) obj/polyweb_0$(obj_ext) obj/websocket_0$(obj_ext) obj/client_0$(obj_ext) obj/polynet_0$(obj_ext) obj/secure_sockets_0$(obj_ext) $(static_libraries)
+lux-desktop$(out_ext): obj/video_0$(obj_ext) obj/setup_0$(obj_ext) obj/keys_0$(obj_ext) obj/theme_0$(obj_ext) obj/media_receiver_0$(obj_ext) obj/main_0$(obj_ext) obj/client_0$(obj_ext) obj/server_0$(obj_ext) obj/websocket_0$(obj_ext) obj/string_0$(obj_ext) obj/polyweb_0$(obj_ext) obj/polynet_0$(obj_ext) obj/secure_sockets_0$(obj_ext) $(static_libraries)
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Building $@..."
 	@"$(cpp_compiler)" $^ $(cpp_compilation_flags) $(out_path_flag)$@ $(link_flag) $(link_time_flags) $(libraries)
 	@printf "\033[1m[POLYBUILD]\033[0m %s\n" "Finished building $@!"
