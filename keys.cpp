@@ -1,161 +1,142 @@
 #include "keys.hpp"
+#include <FL/Fl.H>
+#include <stdio.h>
 
-std::string_view sdl_to_browser_key(SDL_Keycode key) {
+std::string_view fltk_to_browser_key(int key) {
     switch (key) {
-    default: return "Unidentified";
-    case SDLK_ESCAPE: return "Escape";
-    case SDLK_1: return "Digit1";
-    case SDLK_2: return "Digit2";
-    case SDLK_3: return "Digit3";
-    case SDLK_4: return "Digit4";
-    case SDLK_5: return "Digit5";
-    case SDLK_6: return "Digit6";
-    case SDLK_7: return "Digit7";
-    case SDLK_8: return "Digit8";
-    case SDLK_9: return "Digit9";
-    case SDLK_0: return "Digit0";
-    case SDLK_MINUS: return "Minus";
-    case SDLK_EQUALS: return "Equal";
-    case SDLK_BACKSPACE: return "Backspace";
-    case SDLK_TAB: return "Tab";
-    case SDLK_q: return "KeyQ";
-    case SDLK_w: return "KeyW";
-    case SDLK_e: return "KeyE";
-    case SDLK_r: return "KeyR";
-    case SDLK_t: return "KeyT";
-    case SDLK_y: return "KeyY";
-    case SDLK_u: return "KeyU";
-    case SDLK_i: return "KeyI";
-    case SDLK_o: return "KeyO";
-    case SDLK_p: return "KeyP";
-    case SDLK_LEFTBRACKET: return "BracketLeft";
-    case SDLK_RIGHTBRACKET: return "BracketRight";
-    case SDLK_RETURN: return "Enter";
-    case SDLK_LCTRL: return "ControlLeft";
-    case SDLK_a: return "KeyA";
-    case SDLK_s: return "KeyS";
-    case SDLK_d: return "KeyD";
-    case SDLK_f: return "KeyF";
-    case SDLK_g: return "KeyG";
-    case SDLK_h: return "KeyH";
-    case SDLK_j: return "KeyJ";
-    case SDLK_k: return "KeyK";
-    case SDLK_l: return "KeyL";
-    case SDLK_SEMICOLON: return "Semicolon";
-    case SDLK_QUOTE: return "Quote";
-    case SDLK_BACKQUOTE: return "Backquote";
-    case SDLK_LSHIFT: return "ShiftLeft";
-    case SDLK_BACKSLASH: return "Backslash";
-    case SDLK_z: return "KeyZ";
-    case SDLK_x: return "KeyX";
-    case SDLK_c: return "KeyC";
-    case SDLK_v: return "KeyV";
-    case SDLK_b: return "KeyB";
-    case SDLK_n: return "KeyN";
-    case SDLK_m: return "KeyM";
-    case SDLK_COMMA: return "Comma";
-    case SDLK_PERIOD: return "Period";
-    case SDLK_SLASH: return "Slash";
-    case SDLK_RSHIFT: return "ShiftRight";
-    case SDLK_KP_MULTIPLY: return "NumpadMultiply";
-    case SDLK_LALT: return "AltLeft";
-    case SDLK_SPACE: return "Space";
-    case SDLK_CAPSLOCK: return "CapsLock";
-    case SDLK_F1: return "F1";
-    case SDLK_F2: return "F2";
-    case SDLK_F3: return "F3";
-    case SDLK_F4: return "F4";
-    case SDLK_F5: return "F5";
-    case SDLK_F6: return "F6";
-    case SDLK_F7: return "F7";
-    case SDLK_F8: return "F8";
-    case SDLK_F9: return "F9";
-    case SDLK_F10: return "F10";
-    case SDLK_NUMLOCKCLEAR: return "NumLock";
-    case SDLK_SCROLLLOCK: return "ScrollLock";
-    case SDLK_KP_7: return "Numpad7";
-    case SDLK_KP_8: return "Numpad8";
-    case SDLK_KP_9: return "Numpad9";
-    case SDLK_KP_MINUS: return "NumpadSubtract";
-    case SDLK_KP_4: return "Numpad4";
-    case SDLK_KP_5: return "Numpad5";
-    case SDLK_KP_6: return "Numpad6";
-    case SDLK_KP_PLUS: return "NumpadAdd";
-    case SDLK_KP_1: return "Numpad1";
-    case SDLK_KP_2: return "Numpad2";
-    case SDLK_KP_3: return "Numpad3";
-    case SDLK_KP_0: return "Numpad0";
-    case SDLK_KP_PERIOD: return "NumpadDecimal";
-    case SDLK_KP_ENTER: return "NumpadEnter";
-    case SDLK_RCTRL: return "ControlRight";
-    case SDLK_KP_DIVIDE: return "NumpadDivide";
-    case SDLK_PRINTSCREEN: return "PrintScreen";
-    case SDLK_RALT: return "AltRight";
-    case SDLK_HOME: return "Home";
-    case SDLK_UP: return "ArrowUp";
-    case SDLK_PAGEUP: return "PageUp";
-    case SDLK_LEFT: return "ArrowLeft";
-    case SDLK_RIGHT: return "ArrowRight";
-    case SDLK_END: return "End";
-    case SDLK_DOWN: return "ArrowDown";
-    case SDLK_PAGEDOWN: return "PageDown";
-    case SDLK_INSERT: return "Insert";
-    case SDLK_DELETE: return "Delete";
-    case SDLK_PAUSE: return "Pause";
-    // case SDLK_VOLUMEUP: return "AudioVolumeUp";
-    // case SDLK_VOLUMEDOWN: return "AudioVolumeDown";
-    // case SDLK_MUTE: return "AudioVolumeMute";
-    case SDLK_KP_EQUALS: return "NumpadEqual";
-    case SDLK_KP_COMMA: return "NumpadComma";
-    case SDLK_KP_LEFTPAREN: return "NumpadParenLeft";
-    case SDLK_KP_RIGHTPAREN: return "NumpadParenRight";
-    case SDLK_F11: return "F11";
-    case SDLK_F12: return "F12";
-    case SDLK_F13: return "F13";
-    case SDLK_F14: return "F14";
-    case SDLK_F15: return "F15";
-    case SDLK_F16: return "F16";
-    case SDLK_F17: return "F17";
-    case SDLK_F18: return "F18";
-    case SDLK_F19: return "F19";
-    case SDLK_F20: return "F20";
-    case SDLK_F21: return "F21";
-    case SDLK_F22: return "F22";
-    case SDLK_F23: return "F23";
-    case SDLK_F24: return "F24";
-    case SDLK_APPLICATION: return "ContextMenu";
-    case SDLK_POWER: return "Power";
-    case SDLK_HELP: return "Help";
-    case SDLK_MENU: return "Select";
-    case SDLK_STOP: return "BrowserStop";
-    case SDLK_AGAIN: return "Again";
-    case SDLK_UNDO: return "Undo";
-    case SDLK_CUT: return "Cut";
-    case SDLK_COPY: return "Copy";
-    case SDLK_PASTE: return "Paste";
-    case SDLK_FIND: return "Find";
-    case SDLK_LGUI: return "MetaLeft";
-    case SDLK_RGUI: return "MetaRight";
-    case SDLK_WWW: return "BrowserSearch";
-    case SDLK_MAIL: return "LaunchMail";
-    case SDLK_CALCULATOR: return "Calculator";
-    case SDLK_COMPUTER: return "Computer";
-    case SDLK_AC_SEARCH: return "BrowserSearch";
-    case SDLK_AC_HOME: return "BrowserHome";
-    case SDLK_AC_BACK: return "BrowserBack";
-    case SDLK_AC_FORWARD: return "BrowserForward";
-    case SDLK_AC_STOP: return "BrowserStop";
-    case SDLK_AC_REFRESH: return "BrowserRefresh";
-    case SDLK_AC_BOOKMARKS: return "BrowserFavorites";
-    // case SDLK_BRIGHTNESSDOWN: return "BrightnessDown";
-    // case SDLK_BRIGHTNESSUP: return "BrightnessUp";
-    case SDLK_DISPLAYSWITCH: return "DisplaySwitch";
-    case SDLK_KBDILLUMTOGGLE: return "KeyboardIlluminationToggle";
-    case SDLK_KBDILLUMDOWN: return "KeyboardIlluminationDown";
-    case SDLK_KBDILLUMUP: return "KeyboardIlluminationUp";
-    case SDLK_EJECT: return "Eject";
-    case SDLK_SLEEP: return "Sleep";
-    case SDLK_APP1: return "LaunchApp1";
-    case SDLK_APP2: return "LaunchApp2";
+    // ASCII Printable Characters
+    case 'a': return "KeyA";
+    case 'b': return "KeyB";
+    case 'c': return "KeyC";
+    case 'd': return "KeyD";
+    case 'e': return "KeyE";
+    case 'f': return "KeyF";
+    case 'g': return "KeyG";
+    case 'h': return "KeyH";
+    case 'i': return "KeyI";
+    case 'j': return "KeyJ";
+    case 'k': return "KeyK";
+    case 'l': return "KeyL";
+    case 'm': return "KeyM";
+    case 'n': return "KeyN";
+    case 'o': return "KeyO";
+    case 'p': return "KeyP";
+    case 'q': return "KeyQ";
+    case 'r': return "KeyR";
+    case 's': return "KeyS";
+    case 't': return "KeyT";
+    case 'u': return "KeyU";
+    case 'v': return "KeyV";
+    case 'w': return "KeyW";
+    case 'x': return "KeyX";
+    case 'y': return "KeyY";
+    case 'z': return "KeyZ";
+
+    case '1': return "Digit1";
+    case '2': return "Digit2";
+    case '3': return "Digit3";
+    case '4': return "Digit4";
+    case '5': return "Digit5";
+    case '6': return "Digit6";
+    case '7': return "Digit7";
+    case '8': return "Digit8";
+    case '9': return "Digit9";
+    case '0': return "Digit0";
+
+    case ' ': return "Space";
+    case '`': return "Backquote";
+    case '-': return "Minus";
+    case '=': return "Equal";
+    case '[': return "BracketLeft";
+    case ']': return "BracketRight";
+    case '\\': return "Backslash";
+    case ';': return "Semicolon";
+    case '\'': return "Quote";
+    case ',': return "Comma";
+    case '.': return "Period";
+    case '/': return "Slash";
+
+    // Special Keys (from fl_ask.H)
+    case FL_Escape: return "Escape";
+    case FL_BackSpace: return "Backspace";
+    case FL_Tab: return "Tab";
+    case FL_Enter: return "Enter";
+    case FL_Print: return "PrintScreen";
+    case FL_Scroll_Lock: return "ScrollLock";
+    case FL_Pause: return "Pause";
+    case FL_Insert: return "Insert";
+    case FL_Home: return "Home";
+    case FL_Page_Up: return "PageUp";
+    case FL_Delete: return "Delete";
+    case FL_End: return "End";
+    case FL_Page_Down: return "PageDown";
+    case FL_Left: return "ArrowLeft";
+    case FL_Up: return "ArrowUp";
+    case FL_Right: return "ArrowRight";
+    case FL_Down: return "ArrowDown";
+
+    // Modifiers
+    case FL_Shift_L: return "ShiftLeft";
+    case FL_Shift_R: return "ShiftRight";
+    case FL_Control_L: return "ControlLeft";
+    case FL_Control_R: return "ControlRight";
+    case FL_Caps_Lock: return "CapsLock";
+    case FL_Alt_L: return "AltLeft";
+    case FL_Alt_R: return "AltRight";
+    case FL_Meta_L: return "MetaLeft";
+    case FL_Meta_R: return "MetaRight";
+    case FL_Alt_Gr: return "AltGraph";
+    case FL_Menu: return "ContextMenu";
+    case FL_Help: return "Help";
+
+    // Numpad
+    case FL_Num_Lock: return "NumLock";
+    case FL_KP_Enter: return "NumpadEnter";
+
+    // Media and Special Keys (PUA / XFree86)
+    case FL_Stop: return "BrowserStop";
+    case FL_Refresh: return "BrowserRefresh";
+    case FL_Sleep: return "Sleep";
+    case FL_Favorites: return "BrowserFavorites";
+    case FL_Search: return "BrowserSearch";
+    case FL_Home_Page: return "BrowserHome";
+    case FL_Back: return "BrowserBack";
+    case FL_Forward: return "BrowserForward";
+    case FL_Mail: return "LaunchMail";
+    case FL_Media_Play: return "MediaPlayPause";
+    case FL_Media_Stop: return "MediaStop";
+    case FL_Media_Prev: return "MediaTrackPrevious";
+    case FL_Media_Next: return "MediaTrackNext";
+    case FL_Volume_Up: return "AudioVolumeUp";
+    case FL_Volume_Down: return "AudioVolumeDown";
+    case FL_Volume_Mute: return "AudioVolumeMute";
+
+    // International keys
+    case FL_Yen: return "IntlYen";
+
+    default:
+        // Handle ranged keys (Numpad digits and Function keys)
+        if (key >= (FL_KP + '0') && key <= (FL_KP + '9')) {
+            static char buf[10];
+            snprintf(buf, sizeof(buf), "Numpad%d", key - FL_KP - '0');
+            return buf;
+        }
+        if (key >= FL_F && key <= FL_F_Last) {
+            static char buf[5];
+            snprintf(buf, sizeof(buf), "F%d", key - FL_F);
+            return buf;
+        }
+        // Numpad operators are also in a range
+        if (key >= FL_KP && key <= FL_KP_Last) {
+            switch (key - FL_KP) {
+            case '*': return "NumpadMultiply";
+            case '+': return "NumpadAdd";
+            case '-': return "NumpadSubtract";
+            case '.': return "NumpadDecimal";
+            case '/': return "NumpadDivide";
+            case '=': return "NumpadEqual";
+            }
+        }
+        return "Unidentified";
     }
 }

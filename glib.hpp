@@ -4,19 +4,19 @@
 #include <glib-object.h>
 #include <ostream>
 #include <string>
-#include <utility>
 #include <type_traits>
+#include <utility>
 
 namespace glib {
     template <typename... Args, typename T, typename F>
     unsigned long connect_signal(T* object, const std::string& signal_name, F&& handler) {
         GClosure* closure = g_cclosure_new(
             G_CALLBACK(+[](T* object, Args... args, void* handler) {
-                return (*(F*) handler)(object, args...);
+                return (*(std::decay_t<F>*) handler)(object, args...);
             }),
             new std::decay_t<F>(std::forward<F>(handler)),
             [](void* data, GClosure*) {
-                delete (F*) data;
+                delete (std::decay_t<F>*) data;
             });
         return g_signal_connect_closure(object, signal_name.c_str(), closure, FALSE);
     }
