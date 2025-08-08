@@ -1,8 +1,5 @@
 #include "ui.hpp"
-#include "icons/apple.h"
 #include "icons/icon.h"
-#include "icons/tux.h"
-#include "icons/windows.h"
 #include "json.hpp"
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Return_Button.H>
