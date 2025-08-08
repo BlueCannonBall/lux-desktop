@@ -394,8 +394,14 @@ int VideoWindow::handle(int event) {
         break;
 
     case FL_FOCUS:
+        if (!conn_info.view_only) {
+            return 1;
+        }
+        break;
+
     case FL_UNFOCUS:
         if (!conn_info.view_only) {
+            XUngrabKeyboard(fl_x11_display(), CurrentTime);
             return 1;
         }
         break;
