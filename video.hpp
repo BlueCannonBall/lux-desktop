@@ -2,6 +2,7 @@
 
 #include "connection.hpp"
 #include "glib.hpp"
+#include "mouse.hpp"
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 #include <SDL2/SDL.h>
@@ -28,6 +29,8 @@ protected:
     std::shared_ptr<rtc::DataChannel> ordered_channel;
     std::shared_ptr<rtc::DataChannel> unordered_channel;
 
+    RawMouseManager mouse_manager;
+
     VideoInfo video_info;
     glib::Object<GstElement> video_pipeline;
     glib::Object<GstElement> audio_pipeline;
@@ -35,6 +38,8 @@ protected:
 
     bool connected = false;
     bool playing = false;
+
+    static int system_event_handler(void* event, void* data);
 
 public:
     VideoWindow(int x, int y, int width, int height, ConnectionInfo conn_info);

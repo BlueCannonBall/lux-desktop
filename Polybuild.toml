@@ -8,7 +8,7 @@ install = "/usr/local/bin"
 [options]
 compilation-flags = "-Wall -std=c++17 -Ifltk/build -DRTC_ENABLE_WEBSOCKET=0 -DRTC_STATIC -O3 -pthread"
 link-time-flags = "`fltk/build/fltk-config --use-images --ldstaticflags`"
-libraries = ["ssl", "crypto"]
+libraries = ["Xi", "X11", "ssl", "crypto"]
 static-libraries = [
     "libdatachannel/build/libdatachannel-static.a",
     "libdatachannel/build/deps/libsrtp/libsrtp2.a",

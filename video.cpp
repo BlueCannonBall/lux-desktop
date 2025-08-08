@@ -7,8 +7,24 @@
 #include <FL/fl_ask.H>
 #include <FL/x.H>
 #include <gst/video/videooverlay.h>
+#include <math.h>
 
 using nlohmann::json;
+
+int VideoWindow::system_event_handler(void* event, void* data) {
+    auto window = (VideoWindow*) data;
+    auto parsed_event = window->mouse_manager.parse_event(event);
+    if (parsed_event.has_value() && window->unordered_channel->isOpen()) {
+        json message = {
+            {"type", "mousemove"},
+            {"x", (int) round(parsed_event->x)},
+            {"y", (int) round(parsed_event->y)},
+        };
+        window->unordered_channel->send(message.dump());
+        return 1;
+    }
+    return 0;
+}
 
 VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo conn_info):
     Fl_Window(x, y, width, height),
@@ -105,7 +121,11 @@ bool VideoWindow::is_playing() const {
 
 void VideoWindow::show() {
     Fl_Window::show();
-    Fl::flush(); // Force the OS window to be realized
+    Fl::flush(); // Force the underlying OS window to be realized so that GStreamer can find it
+
+    if (!conn_info.view_only && !conn_info.client_side_mouse) {
+        Fl::add_system_handler(&VideoWindow::system_event_handler, this);
+    }
 
     video_pipeline = gst_pipeline_new(nullptr);
     {
@@ -259,9 +279,17 @@ void VideoWindow::show() {
 }
 
 void VideoWindow::hide() {
-    conn->close();
+    if (!conn_info.view_only && !conn_info.client_side_mouse) {
+        Fl::remove_system_handler(&VideoWindow::system_event_handler);
+    }
+
+    video_track->resetCallbacks();
+    audio_track->resetCallbacks();
+
     gst_element_set_state(video_pipeline.get(), GST_STATE_NULL);
     gst_element_set_state(audio_pipeline.get(), GST_STATE_NULL);
+    playing = false;
+
     Fl_Window::hide();
 }
 
@@ -275,13 +303,18 @@ int VideoWindow::handle(int event) {
     switch (event) {
     case FL_PUSH:
         take_focus();
-        if (!conn_info.view_only && ordered_channel->isOpen()) {
-            json message = {
-                {"type", "mousedown"},
-                {"button", Fl::event_button() - 1},
-            };
-            ordered_channel->send(message.dump());
-            return 1;
+        if (!conn_info.view_only) {
+            if (!conn_info.client_side_mouse && !mouse_manager.mouse_locked) {
+                mouse_manager.lock_mouse(this);
+                return 1;
+            } else if (ordered_channel->isOpen()) {
+                json message = {
+                    {"type", "mousedown"},
+                    {"button", Fl::event_button() - 1},
+                };
+                ordered_channel->send(message.dump());
+                return 1;
+            }
         }
         break;
 
@@ -314,14 +347,7 @@ int VideoWindow::handle(int event) {
                     return 1;
                 }
             } else {
-                if (unordered_channel->isOpen()) {
-                    // json message = {
-                    //     {"type", "mousemove"},
-                    //     {"x", event.motion.xrel},
-                    //     {"y", event.motion.yrel},
-                    // };
-                    // unordered_channel->send(message.dump());
-                }
+                return 1; // This is handled by the RawMouseManager
             }
         }
         break;
@@ -330,8 +356,8 @@ int VideoWindow::handle(int event) {
         if (!conn_info.view_only && unordered_channel->isOpen()) {
             json message = {
                 {"type", "wheel"},
-                {"x", (int) roundf(Fl::event_dx() * 120.f)},
-                {"y", (int) roundf(Fl::event_dy() * 120.f)},
+                {"x", (int) roundf(Fl::event_dx() * 120.)},
+                {"y", (int) roundf(Fl::event_dy() * 120.)},
             };
             unordered_channel->send(message.dump());
             return 1;
@@ -339,7 +365,14 @@ int VideoWindow::handle(int event) {
         break;
 
     case FL_KEYUP:
-        if (!conn_info.view_only && ordered_channel->isOpen()) {
+        if (Fl::event_key() == FL_F + 9) {
+            if (mouse_manager.mouse_locked) {
+                mouse_manager.unlock_mouse(this);
+            } else {
+                mouse_manager.lock_mouse(this);
+            }
+            return 1;
+        } else if (!conn_info.view_only && ordered_channel->isOpen()) {
             json message = {
                 {"type", "keyup"},
                 {"key", fltk_to_browser_key(Fl::event_key())},
@@ -350,7 +383,7 @@ int VideoWindow::handle(int event) {
         break;
 
     case FL_KEYDOWN:
-        if (!conn_info.view_only && ordered_channel->isOpen()) {
+        if (!conn_info.view_only && Fl::event_key() != FL_F + 9 && ordered_channel->isOpen()) {
             json message = {
                 {"type", "keydown"},
                 {"key", fltk_to_browser_key(Fl::event_key())},
@@ -366,6 +399,20 @@ int VideoWindow::handle(int event) {
             return 1;
         }
         break;
+
+    case FL_ENTER:
+        if (!conn_info.view_only) {
+            XGrabKeyboard(fl_x11_display(), fl_xid(this), False, GrabModeAsync, GrabModeAsync, CurrentTime);
+            return 1;
+        }
+        break;
+
+    case FL_LEAVE:
+        if (!conn_info.view_only) {
+            XUngrabKeyboard(fl_x11_display(), CurrentTime);
+            return 1;
+        }
+        break;
     }
     return Fl_Window::handle(event);
 }
@@ -375,183 +422,16 @@ void VideoWindow::position_in_video(int x, int y, int& x_ret, int& y_ret) {
     int window_height = h();
 
     std::lock_guard<std::mutex> lock(video_info.mutex);
-    float video_aspect_ratio = (float) video_info.width / video_info.height;
-    float window_aspect_ratio = (float) window_width / window_height;
+    double video_aspect_ratio = (double) video_info.width / video_info.height;
+    double window_aspect_ratio = (double) window_width / window_height;
     if (video_aspect_ratio > window_aspect_ratio) {
-        x_ret = x / ((float) window_width / video_info.width);
-        y_ret = (y - ((1.f - window_aspect_ratio / video_aspect_ratio) * window_height / 2.f)) / ((float) window_width / video_info.width);
+        x_ret = x / ((double) window_width / video_info.width);
+        y_ret = (y - ((1. - window_aspect_ratio / video_aspect_ratio) * window_height / 2.)) / ((double) window_width / video_info.width);
     } else if (video_aspect_ratio < window_aspect_ratio) {
-        x_ret = (x - ((1.f - video_aspect_ratio / window_aspect_ratio) * window_width / 2.f)) / ((float) window_height / video_info.height);
-        y_ret = y / ((float) window_height / video_info.height);
+        x_ret = (x - ((1. - video_aspect_ratio / window_aspect_ratio) * window_width / 2.)) / ((double) window_height / video_info.height);
+        y_ret = y / ((double) window_height / video_info.height);
     } else {
-        x_ret = x / ((float) window_width / video_info.width);
-        y_ret = y / ((float) window_height / video_info.height);
+        x_ret = x / ((double) window_width / video_info.width);
+        y_ret = y / ((double) window_height / video_info.height);
     }
 }
-
-// void VideoWindow::set_keyboard_grab(bool grabbed) {
-//     if (grabbed) {
-// #if !defined(_WIN32) && !defined(__APPLE__)
-//         if (is_kde() && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts true") != 0) {
-//             std::cerr << "Warning: Qt D-Bus call failed (ignore unless on KDE)" << std::endl;
-//         }
-// #endif
-//         SDL_SetWindowKeyboardGrab(window, SDL_TRUE);
-//     } else {
-// #if !defined(_WIN32) && !defined(__APPLE__)
-//         if (is_kde() && system("qdbus org.kde.kglobalaccel /kglobalaccel blockGlobalShortcuts false") != 0) {
-//             std::cerr << "Warning: Qt D-Bus call failed (ignore unless on KDE)" << std::endl;
-//         }
-// #endif
-//         SDL_SetWindowKeyboardGrab(window, SDL_FALSE);
-//     }
-// }
-
-// void VideoWindow::run(std::shared_ptr<rtc::PeerConnection> conn, std::shared_ptr<rtc::Track> track, std::shared_ptr<rtc::DataChannel> ordered_channel, std::shared_ptr<rtc::DataChannel> unordered_channel) {
-//     for (;;) {
-//         if (conn->iceState() == rtc::PeerConnection::IceState::Closed ||
-//             conn->iceState() == rtc::PeerConnection::IceState::Disconnected ||
-//             conn->iceState() == rtc::PeerConnection::IceState::Failed) {
-//             SDL_SetWindowFullscreen(window, 0);
-//             if (!view_only) {
-//                 SDL_SetRelativeMouseMode(SDL_FALSE);
-//                 set_keyboard_grab(false);
-//             }
-//             fl_alert("The connection has closed.");
-//             break;
-//         }
-
-//         SDL_Event event;
-//         if (SDL_WaitEvent(&event)) {
-//             do {
-//                 switch (event.type) {
-//                 case SDL_QUIT:
-//                     gst_element_set_state(overlay, GST_STATE_NULL);
-//                     return;
-
-//                 case SDL_WINDOWEVENT:
-//                     switch (event.window.event) {
-//                     case SDL_WINDOWEVENT_EXPOSED:
-//                         gst_video_overlay_expose(GST_VIDEO_OVERLAY(overlay));
-//                         break;
-
-//                     case SDL_WINDOWEVENT_FOCUS_LOST:
-//                         if (!view_only) {
-//                             set_keyboard_grab(false);
-//                         }
-//                         break;
-
-//                     case SDL_WINDOWEVENT_FOCUS_GAINED:
-//                         if (!view_only) {
-//                             set_keyboard_grab(true);
-//                         }
-//                         break;
-//                     }
-//                     break;
-
-//                 case SDL_KEYDOWN:
-//                     if (!view_only &&
-//                         event.key.keysym.sym != SDLK_F5 &&
-//                         event.key.keysym.sym != SDLK_F9 &&
-//                         event.key.keysym.sym != SDLK_F11 &&
-//                         ordered_channel->isOpen()) {
-//                         json message = {
-//                             {"type", "keydown"},
-//                             {"key", sdl_to_browser_key(event.key.keysym.sym)},
-//                         };
-//                         ordered_channel->send(message.dump());
-//                     }
-//                     break;
-
-//                 case SDL_KEYUP:
-//                     if (event.key.keysym.sym == SDLK_F5) {
-//                         track->requestKeyframe();
-//                     } else if (event.key.keysym.sym == SDLK_F11) {
-//                         Uint32 flags = SDL_GetWindowFlags(window);
-//                         if (flags & SDL_WINDOW_FULLSCREEN) {
-//                             SDL_SetWindowFullscreen(window, 0);
-//                         } else {
-//                             SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-//                         }
-//                     } else if (!view_only) {
-//                         if (event.key.keysym.sym == SDLK_F9) {
-//                             if (!client_side_mouse) {
-//                                 SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() ? SDL_FALSE : SDL_TRUE);
-//                             }
-//                         } else if (ordered_channel->isOpen()) {
-//                             json message = {
-//                                 {"type", "keyup"},
-//                                 {"key", sdl_to_browser_key(event.key.keysym.sym)},
-//                             };
-//                             ordered_channel->send(message.dump());
-//                         }
-//                     }
-//                     break;
-
-//                 case SDL_MOUSEMOTION:
-//                     if (!view_only) {
-//                         if (client_side_mouse) {
-//                             if (ordered_channel->isOpen()) {
-//                                 int x;
-//                                 int y;
-//                                 position_in_video(event.motion.x, event.motion.y, x, y);
-
-//                                 json message = {
-//                                     {"type", "mousemoveabs"},
-//                                     {"x", x},
-//                                     {"y", y},
-//                                 };
-//                                 ordered_channel->send(message.dump());
-//                             }
-//                         } else {
-//                             if (unordered_channel->isOpen()) {
-//                                 json message = {
-//                                     {"type", "mousemove"},
-//                                     {"x", event.motion.xrel},
-//                                     {"y", event.motion.yrel},
-//                                 };
-//                                 unordered_channel->send(message.dump());
-//                             }
-//                         }
-//                     }
-//                     break;
-
-//                 case SDL_MOUSEBUTTONDOWN:
-//                     if (!view_only) {
-//                         if (!client_side_mouse && !SDL_GetRelativeMouseMode()) {
-//                             SDL_SetRelativeMouseMode(SDL_TRUE);
-//                         } else if (ordered_channel->isOpen()) {
-//                             json message = {
-//                                 {"type", "mousedown"},
-//                                 {"button", event.button.button - 1},
-//                             };
-//                             ordered_channel->send(message.dump());
-//                         }
-//                     }
-//                     break;
-
-//                 case SDL_MOUSEBUTTONUP:
-//                     if (!view_only && ordered_channel->isOpen()) {
-//                         json message = {
-//                             {"type", "mouseup"},
-//                             {"button", event.button.button - 1},
-//                         };
-//                         ordered_channel->send(message.dump());
-//                     }
-//                     break;
-
-//                 case SDL_MOUSEWHEEL:
-//                     if (!view_only && unordered_channel->isOpen()) {
-//                         json message = {
-//                             {"type", "wheel"},
-//                             {"x", (int) roundf(event.wheel.preciseX * 120.f)},
-//                             {"y", (int) roundf(event.wheel.preciseY * -120.f)},
-//                         };
-//                         unordered_channel->send(message.dump());
-//                     }
-//                     break;
-//                 }
-//             } while (SDL_PollEvent(&event));
-//         }
-//     }
-// }

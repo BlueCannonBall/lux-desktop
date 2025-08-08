@@ -67,8 +67,7 @@ void Stage::set_centered(Fl_Widget* widget) {
 }
 
 void Stage::set_fill(bool value) {
-    fill = true;
-    if (centered) {
+    if ((fill = value) && centered) {
         centered->resize(x(), y(), w(), h());
     }
     redraw();
@@ -150,7 +149,7 @@ ConnectionEditor::ConnectionEditor(int x, int y, int width, int height, const st
 }
 
 MainWindow::MainWindow():
-    Fl_Double_Window(1000, 600, "Lux Client"),
+    Fl_Double_Window(1000, 650, "Lux Client"),
     window_icon(nullptr, icons_icon_png, icons_icon_png_len) {
     xclass("lux-desktop");
     icon(&window_icon);
@@ -245,7 +244,7 @@ void MainWindow::handle_select_conn() {
 
         new Fl_Box(0, 0, 0, 0); // Empty space
 
-        auto delete_button = new Fl_Button(0, 0, 0, 0, "Delete");
+        auto delete_button = new Fl_Button(0, 0, 75, 0, "Delete");
         FL_INLINE_CALLBACK_2(delete_button, MainWindow*, window, this, int, index, conn_list->value(), {
             auto conn_info = window->conn_editor->to_conn_info();
             if (auto config_path = get_config_path(); !config_path.empty()) {
@@ -258,9 +257,9 @@ void MainWindow::handle_select_conn() {
                 }
             }
         });
-        row->fixed(delete_button, 75);
+        row->fixed(delete_button, delete_button->w());
 
-        auto save_button = new Fl_Button(0, 0, 0, 0, "Save");
+        auto save_button = new Fl_Button(0, 0, 75, 0, "Save");
         FL_INLINE_CALLBACK_2(save_button, MainWindow*, window, this, int, index, conn_list->value(), {
             if (auto config_path = get_config_path(); !config_path.empty()) {
                 auto conn_path = config_path / "connections";
@@ -285,9 +284,9 @@ void MainWindow::handle_select_conn() {
                 }
             }
         });
-        row->fixed(save_button, 75);
+        row->fixed(save_button, save_button->w());
 
-        auto connect_button = new Fl_Button(0, 0, 0, 0, "Connect");
+        auto connect_button = new Fl_Button(0, 0, 75, 0, "Connect");
         FL_INLINE_CALLBACK_2(connect_button, MainWindow*, window, this, int, index, conn_list->value(), {
             window->video_window = new VideoWindow(0, 0, 400, 400, window->conn_editor->to_conn_info());
             if (!window->video_window->is_connected()) {
@@ -308,7 +307,7 @@ void MainWindow::handle_select_conn() {
                 window->refresh();
             }
         });
-        row->fixed(connect_button, 75);
+        row->fixed(connect_button, connect_button->w());
 
         row->end();
         conn_editor->end();

@@ -37,6 +37,5 @@ int main(int argc, char* argv[]) {
 
     MainWindow window;
     window.show();
-    Fl::run();
-    return EXIT_SUCCESS;
+    return Fl::run();
 }
