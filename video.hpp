@@ -46,11 +46,14 @@ public:
 
     bool is_connected() const;
     bool is_playing() const;
+    rtc::PeerConnection::IceState ice_state() const;
     void show() override;
     void hide() override;
     void draw() override;
     int handle(int event) override;
     void position_in_video(int x, int y, int& x_ret, int& y_ret);
+    unsigned int get_bitrate() const;
+    void set_bitrate(unsigned int bitrate);
     void request_keyframe();
     void release_all_keys();
 };

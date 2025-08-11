@@ -106,4 +106,6 @@ protected:
     void handle_select_conn();
     void handle_new_conn();
     void handle_toggle_fullscreen();
+    void handle_set_bitrate();
+    static void check_ice_state(void* data);
 };

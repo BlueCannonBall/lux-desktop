@@ -126,6 +126,10 @@ bool VideoWindow::is_playing() const {
     return playing;
 }
 
+rtc::PeerConnection::IceState VideoWindow::ice_state() const {
+    return conn->iceState();
+}
+
 void VideoWindow::show() {
     Fl_Window::show();
     Fl::flush(); // Force the underlying OS window to be realized so that GStreamer can find it
@@ -464,6 +468,14 @@ void VideoWindow::position_in_video(int x, int y, int& x_ret, int& y_ret) {
         x_ret = x / ((double) window_width / video_info.width);
         y_ret = y / ((double) window_height / video_info.height);
     }
+}
+
+unsigned int VideoWindow::get_bitrate() const {
+    return conn_info.bitrate;
+}
+
+void VideoWindow::set_bitrate(unsigned int bitrate) {
+    video_track->requestBitrate((conn_info.bitrate = bitrate) * 1000);
 }
 
 void VideoWindow::request_keyframe() {
