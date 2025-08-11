@@ -310,7 +310,7 @@ void MainWindow::handle_select_conn() {
 
                     *((ConnectionInfo*) window->conn_list->data(index)) = std::move(conn_info);
                 } else {
-                    fl_message("Error: Failed to save file: Could not open file");
+                    fl_alert("Error: Failed to save file: Could not open file");
                     return;
                 }
 
@@ -378,11 +378,11 @@ void MainWindow::handle_new_conn() {
                 file.close();
                 main_window->refresh();
             } else {
-                fl_message("Error: Failed to save file: Could not open file");
+                fl_alert("Error: Failed to save file: Could not open file");
                 return;
             }
         } else {
-            fl_message("Error: Failed to save file: Could not find configuration directory");
+            fl_alert("Error: Failed to save file: Could not find configuration directory");
             return;
         }
 
@@ -407,7 +407,6 @@ void MainWindow::handle_set_bitrate() {
         auto window = new Fl_Double_Window(250, 85, "Set Bitrate");
         window->xclass("lux-desktop");
         window->icon(&window_icon);
-        window->size_range(250, 85, 0, 400);
         window->set_modal();
 
         auto row = new Fl_Flex(10, 10, window->w() - 20, window->h() - 55, Fl_Flex::ROW);
@@ -438,7 +437,7 @@ void MainWindow::handle_set_bitrate() {
         set_window_dark_mode(fl_xid(window));
 #endif
     } else {
-        fl_message("Try connecting first!");
+        fl_alert("Error: There is no active connection");
     }
 }
 
@@ -462,7 +461,7 @@ void MainWindow::check_ice_state(void* data) {
         ice_state == rtc::PeerConnection::IceState::Closed ||
         ice_state == rtc::PeerConnection::IceState::Disconnected ||
         ice_state == rtc::PeerConnection::IceState::Failed) {
-        fl_alert("The connection has closed.");
+        fl_message("The connection has closed.");
         window->refresh();
     } else {
         Fl::repeat_timeout(2., check_ice_state, data);
