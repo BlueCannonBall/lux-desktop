@@ -2,10 +2,9 @@
 
 #include "connection.hpp"
 #include "glib.hpp"
-#include "mouse.hpp"
+#include "input.hpp"
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
-#include <SDL2/SDL.h>
 #include <assert.h>
 #include <gst/gst.h>
 #include <gst/video/videooverlay.h>
@@ -29,7 +28,8 @@ protected:
     std::shared_ptr<rtc::DataChannel> ordered_channel;
     std::shared_ptr<rtc::DataChannel> unordered_channel;
 
-    RawMouseManager mouse_manager;
+    std::unique_ptr<RawMouseManager> mouse_manager;
+    std::unique_ptr<KeyboardGrabManager> keyboard_grab_manager;
 
     VideoInfo video_info;
     glib::Object<GstElement> video_pipeline;

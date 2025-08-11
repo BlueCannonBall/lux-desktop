@@ -1,3 +1,5 @@
+#define NOMINMAX
+
 #include "ui.hpp"
 #include "icons/icon.h"
 #include "json.hpp"
@@ -9,6 +11,10 @@
 #include <filesystem>
 #include <fstream>
 #include <stdlib.h>
+#ifdef _WIN32
+    #include "theme.hpp"
+    #include <Fl/x.H>
+#endif
 
 using nlohmann::json;
 
@@ -155,7 +161,7 @@ MainWindow::MainWindow():
     auto column = new Fl_Flex(0, 0, w(), h(), Fl_Flex::COLUMN);
 
     menu_bar = new Fl_Menu_Bar(0, 0, w(), 30);
-    menu_bar->add("File/New Connection", 0, [](Fl_Widget*, void* data) {
+    menu_bar->add("File/New Connection", FL_CTRL + 'n', [](Fl_Widget*, void* data) {
         auto window = (MainWindow*) data;
         window->handle_new_conn();
     },
@@ -163,6 +169,16 @@ MainWindow::MainWindow():
     menu_bar->add("File/Quit", 0, [](Fl_Widget*, void*) {
         exit(0);
     });
+    menu_bar->add("View/Fullscreen", 0, [](Fl_Widget*, void* data) {
+        auto window = (MainWindow*) data;
+        window->refresh();
+    },
+        this);
+    menu_bar->add("View/Request Keyframe", 0, [](Fl_Widget*, void* data) {
+        auto window = (MainWindow*) data;
+        window->refresh();
+    },
+        this);
     menu_bar->add("View/Refresh", 0, [](Fl_Widget*, void* data) {
         auto window = (MainWindow*) data;
         window->refresh();
@@ -174,13 +190,6 @@ MainWindow::MainWindow():
     column->fixed(menu_bar, menu_bar->h());
 
     tile = new Fl_Tile(0, menu_bar->h(), w(), h() - menu_bar->h());
-
-    // auto tux = new Fl_SVG_Image(nullptr, icons_tux_svg, icons_tux_svg_len);
-    // auto apple = new Fl_SVG_Image(nullptr, icons_apple_svg, icons_apple_svg_len);
-    // auto windows = new Fl_SVG_Image(nullptr, icons_windows_svg, icons_windows_svg_len);
-    // tux->resize(30, 30);
-    // apple->resize(30, 30);
-    // windows->resize(30, 30);
 
     conn_list = new Fl_Hold_Browser(0, menu_bar->h(), 200, h() - menu_bar->h());
     tile->size_range(conn_list, 100, 200);
@@ -201,6 +210,14 @@ MainWindow::MainWindow():
     refresh();
 }
 
+void MainWindow::show() {
+    Fl_Double_Window::show();
+#ifdef _WIN32
+    Fl::flush();
+    set_window_dark_mode(fl_xid(this));
+#endif
+}
+
 void MainWindow::refresh() {
     conn_list->deselect();
     handle_select_conn();
@@ -214,7 +231,7 @@ void MainWindow::refresh() {
                 if (entry.path().extension() == ".json") {
                     if (std::ifstream file(entry.path()); file.is_open()) {
                         auto& conn_info = connections.emplace_back(std::make_unique<ConnectionInfo>(json::parse(file)));
-                        conn_list->add(entry.path().stem().c_str(), conn_info.get());
+                        conn_list->add(("@b" + entry.path().stem().string()).c_str(), conn_info.get());
                     }
                 }
             }
@@ -233,7 +250,7 @@ void MainWindow::handle_select_conn() {
     if (conn_list->value()) {
         stage->begin();
 
-        conn_editor = new ConnectionEditor(0, 0, 350, 275, conn_list->text(conn_list->value()), *(ConnectionInfo*) conn_list->data(conn_list->value()));
+        conn_editor = new ConnectionEditor(0, 0, 350, 275, std::string(conn_list->text(conn_list->value())).substr(2), *(ConnectionInfo*) conn_list->data(conn_list->value()));
         conn_editor->begin();
 
         auto row = new Fl_Flex(Fl_Flex::ROW);
@@ -249,7 +266,7 @@ void MainWindow::handle_select_conn() {
                 if (!std::filesystem::exists(conn_path)) {
                     std::filesystem::create_directory(conn_path);
                 } else {
-                    std::filesystem::remove(conn_path / (std::string(window->conn_list->text(index)) + ".json"));
+                    std::filesystem::remove(conn_path / (std::string(window->conn_list->text(index)).substr(2) + ".json"));
                     window->refresh();
                 }
             }
@@ -275,9 +292,9 @@ void MainWindow::handle_select_conn() {
                     return;
                 }
 
-                if (window->conn_editor->name() != window->conn_list->text(index)) {
-                    std::filesystem::remove((conn_path / window->conn_list->text(index)).replace_extension(".json"));
-                    window->conn_list->text(index, window->conn_editor->name().c_str());
+                if (window->conn_editor->name() != std::string(window->conn_list->text(index)).substr(2)) {
+                    std::filesystem::remove((conn_path / std::string(window->conn_list->text(index)).substr(2)).replace_extension(".json"));
+                    window->conn_list->text(index, ("@b" + window->conn_editor->name()).c_str());
                 }
             }
         });
@@ -319,6 +336,9 @@ void MainWindow::handle_new_conn() {
     window->icon(&window_icon);
     window->size_range(350, 295, 0, 400);
     window->set_modal();
+#ifdef _WIN32
+    set_window_dark_mode(fl_xid(window));
+#endif
 
     auto conn_editor = new ConnectionEditor(10, 10, window->w() - 20, window->h() - 55);
     window->resizable(conn_editor);
@@ -354,4 +374,8 @@ void MainWindow::handle_new_conn() {
 
     window->end();
     window->show();
+#ifdef _WIN32
+    Fl::flush();
+    set_window_dark_mode(fl_xid(window));
+#endif
 }

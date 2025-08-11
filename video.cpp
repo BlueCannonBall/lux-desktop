@@ -1,5 +1,7 @@
-#include "video.hpp"
+// clang-format off
 #include "Polyweb/polyweb.hpp"
+// clang-format on
+#include "video.hpp"
 #include "json.hpp"
 #include "keys.hpp"
 #include "media_receiver.hpp"
@@ -7,13 +9,14 @@
 #include <FL/fl_ask.H>
 #include <FL/x.H>
 #include <gst/video/videooverlay.h>
+#include <inttypes.h>
 #include <math.h>
 
 using nlohmann::json;
 
 int VideoWindow::system_event_handler(void* event, void* data) {
     auto window = (VideoWindow*) data;
-    auto parsed_event = window->mouse_manager.parse_event(event);
+    auto parsed_event = window->mouse_manager->parse_event(event);
     if (parsed_event.has_value() && window->unordered_channel->isOpen()) {
         json message = {
             {"type", "mousemove"},
@@ -123,8 +126,12 @@ void VideoWindow::show() {
     Fl_Window::show();
     Fl::flush(); // Force the underlying OS window to be realized so that GStreamer can find it
 
-    if (!conn_info.view_only && !conn_info.client_side_mouse) {
-        Fl::add_system_handler(&VideoWindow::system_event_handler, this);
+    if (!conn_info.view_only) {
+        if (!conn_info.client_side_mouse) {
+            mouse_manager = std::make_unique<RawMouseManager>(this);
+            Fl::add_system_handler(&VideoWindow::system_event_handler, this);
+        }
+        keyboard_grab_manager = std::make_unique<KeyboardGrabManager>(this);
     }
 
     video_pipeline = gst_pipeline_new(nullptr);
@@ -151,8 +158,14 @@ void VideoWindow::show() {
 
         GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
 
+#ifdef _WIN32
+        GstElement* h264parse = gst_element_factory_make("h264parse", nullptr);
+
+        GstElement* h264dec = gst_element_factory_make("d3d11h264dec", nullptr);
+#else
         GstElement* h264dec = gst_element_factory_make("avdec_h264", nullptr);
         g_object_set(h264dec, "direct-rendering", FALSE, nullptr);
+#endif
         {
             glib::Object<GstPad> pad = gst_element_get_static_pad(h264dec, "src");
             gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
@@ -175,26 +188,30 @@ void VideoWindow::show() {
         }
 
 #ifdef _WIN32
-        GstElement* videosink;
-        if (!(video_sink = gst_element_factory_make("d3d12videosink", nullptr))) {
-            videosink = gst_element_factory_make("d3d11videosink", nullptr);
-        }
+        GstElement* videosink = gst_element_factory_make("d3d11videosink", nullptr);
+        g_object_set(videosink, "enable-navigation-events", FALSE, nullptr);
 #elif defined(__APPLE__)
         GstElement* videosink = gst_element_factory_make("osxvideosink", nullptr);
 #else
         GstElement* videosink = gst_element_factory_make("xvimagesink", nullptr);
 #endif
-        g_object_set(videosink, "sync", FALSE, nullptr);
+        g_object_set(videosink, "max-lateness", 0, nullptr);
 
         gst_bin_add_many(GST_BIN(video_pipeline.get()),
             appsrc,
             rtph264depay,
+#ifdef _WIN32
+            h264parse,
+#endif
             h264dec,
             videosink,
             nullptr);
         if (!gst_element_link_many(
                 appsrc,
                 rtph264depay,
+#ifdef _WIN32
+                h264parse,
+#endif
                 h264dec,
                 videosink,
                 nullptr)) {
@@ -204,7 +221,6 @@ void VideoWindow::show() {
 
         gst_video_overlay_handle_events(GST_VIDEO_OVERLAY(videosink), FALSE);
 #ifdef _WIN32
-        set_window_dark_mode(info.info.win.window);
         gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(videosink), (uintptr_t) fl_xid(this));
 #elif defined(__APPLE__)
         gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(videosink), (uintptr_t) fl_xid(this));
@@ -279,8 +295,12 @@ void VideoWindow::show() {
 }
 
 void VideoWindow::hide() {
-    if (!conn_info.view_only && !conn_info.client_side_mouse) {
-        Fl::remove_system_handler(&VideoWindow::system_event_handler);
+    if (!conn_info.view_only) {
+        if (!conn_info.client_side_mouse) {
+            Fl::remove_system_handler(&VideoWindow::system_event_handler);
+            mouse_manager.reset();
+        }
+        keyboard_grab_manager.reset();
     }
 
     video_track->resetCallbacks();
@@ -304,8 +324,8 @@ int VideoWindow::handle(int event) {
     case FL_PUSH:
         take_focus();
         if (!conn_info.view_only) {
-            if (!conn_info.client_side_mouse && !mouse_manager.mouse_locked) {
-                mouse_manager.lock_mouse(this);
+            if (!conn_info.client_side_mouse && !mouse_manager->mouse_locked) {
+                mouse_manager->lock_mouse();
                 return 1;
             } else if (ordered_channel->isOpen()) {
                 json message = {
@@ -365,20 +385,22 @@ int VideoWindow::handle(int event) {
         break;
 
     case FL_KEYUP:
-        if (Fl::event_key() == FL_F + 9) {
-            if (mouse_manager.mouse_locked) {
-                mouse_manager.unlock_mouse(this);
-            } else {
-                mouse_manager.lock_mouse(this);
+        if (!conn_info.view_only) {
+            if (!conn_info.client_side_mouse && Fl::event_key() == FL_F + 9) {
+                if (mouse_manager->mouse_locked) {
+                    mouse_manager->unlock_mouse();
+                } else {
+                    mouse_manager->lock_mouse();
+                }
+                return 1;
+            } else if (ordered_channel->isOpen()) {
+                json message = {
+                    {"type", "keyup"},
+                    {"key", fltk_to_browser_key(Fl::event_key())},
+                };
+                ordered_channel->send(message.dump());
+                return 1;
             }
-            return 1;
-        } else if (!conn_info.view_only && ordered_channel->isOpen()) {
-            json message = {
-                {"type", "keyup"},
-                {"key", fltk_to_browser_key(Fl::event_key())},
-            };
-            ordered_channel->send(message.dump());
-            return 1;
         }
         break;
 
@@ -401,21 +423,21 @@ int VideoWindow::handle(int event) {
 
     case FL_UNFOCUS:
         if (!conn_info.view_only) {
-            XUngrabKeyboard(fl_x11_display(), CurrentTime);
+            keyboard_grab_manager->ungrab_keyboard();
             return 1;
         }
         break;
 
     case FL_ENTER:
         if (!conn_info.view_only) {
-            XGrabKeyboard(fl_x11_display(), fl_xid(this), False, GrabModeAsync, GrabModeAsync, CurrentTime);
+            keyboard_grab_manager->grab_keyboard();
             return 1;
         }
         break;
 
     case FL_LEAVE:
         if (!conn_info.view_only) {
-            XUngrabKeyboard(fl_x11_display(), CurrentTime);
+            keyboard_grab_manager->ungrab_keyboard();
             return 1;
         }
         break;

@@ -38,6 +38,9 @@ link-time-flags = "/SUBSYSTEM:WINDOWS"
 libraries = ["libssl.lib", "libcrypto.lib", "crypt32.lib", "iphlpapi.lib", "dwmapi.lib", "gdiplus.lib", "shell32.lib", "ole32.lib", "oleaut32.lib", "comdlg32.lib", "winspool.lib", "user32.lib", "bcrypt.lib", "kernel32.lib", "gdi32.lib", "advapi32.lib", "comctl32.lib", "imm32.lib", "ws2_32.lib"]
 static-libraries = [
     "fltk/build/lib/fltk.lib",
+    "fltk/build/lib/fltk_images.lib",
+    "fltk/build/lib/fltk_png.lib",
+    "fltk/build/lib/fltk_z.lib",
     "libdatachannel/build/datachannel-static.lib",
     "libdatachannel/build/deps/libsrtp/srtp2.lib",
     "libdatachannel/build/deps/usrsctp/usrsctplib/usrsctp.lib",

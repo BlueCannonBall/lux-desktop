@@ -76,6 +76,8 @@ class MainWindow : public Fl_Double_Window {
 public:
     MainWindow();
 
+    void show() override;
+
 protected:
     Fl_PNG_Image window_icon;
     Fl_Menu_Bar* menu_bar;

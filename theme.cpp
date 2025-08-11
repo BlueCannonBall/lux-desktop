@@ -169,6 +169,7 @@ void configure_fltk_colors() {
         Fl::set_boxtype(FL_UP_FRAME, draw_dark_fltk_up_frame, 2, 2, 4, 4);
         Fl::set_boxtype(FL_DOWN_BOX, draw_dark_fltk_down_box, 2, 2, 4, 4);
         Fl::set_boxtype(FL_DOWN_FRAME, draw_dark_fltk_down_frame, 2, 2, 4, 4);
+        Fl::foreground(255, 255, 255);
         Fl::background(44, 44, 44);
         Fl::background2(22, 22, 22);
     } else {
