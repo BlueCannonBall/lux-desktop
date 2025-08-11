@@ -108,26 +108,15 @@ private:
     static HHOOK hook;
     static bool keyboard_grabbed;
 
-    static void post_key(WORD vkCode, bool key_down) {
+    static void post_key(WORD vkCode, UINT type, bool extended) {
         UINT scancode = MapVirtualKey(vkCode, MAPVK_VK_TO_VSC);
-
-        // Extended key? (Windows keys are extended)
-        bool extended = (vkCode == VK_LWIN || vkCode == VK_RWIN ||
-                         vkCode == VK_RCONTROL || vkCode == VK_RMENU ||
-                         vkCode == VK_INSERT || vkCode == VK_DELETE ||
-                         vkCode == VK_HOME || vkCode == VK_END ||
-                         vkCode == VK_NEXT || vkCode == VK_PRIOR ||
-                         vkCode == VK_UP || vkCode == VK_DOWN ||
-                         vkCode == VK_LEFT || vkCode == VK_RIGHT);
-
-        LPARAM lParam = 1 | (scancode << 16); // repeat count = 1
+        LPARAM lParam = 1 | (scancode << 16); // Repeat count = 1
         if (extended) lParam |= (1 << 24);
-        if (!key_down) {
-            lParam |= (1 << 31); // transition (up)
-            lParam |= (1 << 30); // previous state
+        if (type == WM_KEYUP || type == WM_SYSKEYUP) {
+            lParam |= (1 << 31); // Transition (up)
+            lParam |= (1 << 30); // Previous state
         }
-
-        PostMessage(window, key_down ? WM_KEYDOWN : WM_KEYUP, vkCode, lParam);
+        PostMessage(window, type, vkCode, lParam);
     }
 
     static LRESULT CALLBACK hook_cb(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -141,13 +130,9 @@ private:
             switch (event_info->vkCode) {
             case VK_LWIN:
             case VK_RWIN:
-            case VK_LMENU:
-            case VK_RMENU:
-            case VK_LCONTROL:
-            case VK_RCONTROL:
             case VK_TAB:
-            case VK_ESCAPE:
-                post_key(event_info->vkCode, wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
+            case VK_SNAPSHOT:
+                post_key(event_info->vkCode, wParam, event_info->flags & LLKHF_EXTENDED);
                 return 1;
             }
         }

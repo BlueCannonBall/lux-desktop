@@ -32,6 +32,9 @@ int VideoWindow::system_event_handler(void* event, void* data) {
 VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo conn_info):
     Fl_Window(x, y, width, height),
     conn_info(std::move(conn_info)) {
+    resizable(this);
+    end(); // No child widgets!
+
     rtc::Configuration config;
     config.iceServers.emplace_back("stun.l.google.com:19302");
     conn = std::make_shared<rtc::PeerConnection>(config);
@@ -303,19 +306,33 @@ void VideoWindow::hide() {
         keyboard_grab_manager.reset();
     }
 
-    video_track->resetCallbacks();
-    audio_track->resetCallbacks();
+    video_track->onMessage(nullptr);
+    audio_track->onMessage(nullptr);
 
+    overlay = nullptr;
     gst_element_set_state(video_pipeline.get(), GST_STATE_NULL);
     gst_element_set_state(audio_pipeline.get(), GST_STATE_NULL);
     playing = false;
 
     Fl_Window::hide();
+    Fl::flush();
 }
 
 void VideoWindow::draw() {
     if (overlay) {
         gst_video_overlay_expose(GST_VIDEO_OVERLAY(overlay));
+    }
+}
+
+static bool is_key_shortcut(int key) {
+    switch (key) {
+    case FL_F + 5:
+    case FL_F + 9:
+    case FL_F + 11:
+        return true;
+
+    default:
+        return false;
     }
 }
 
@@ -393,7 +410,7 @@ int VideoWindow::handle(int event) {
                     mouse_manager->lock_mouse();
                 }
                 return 1;
-            } else if (ordered_channel->isOpen()) {
+            } else if (!is_key_shortcut(Fl::event_key()) && ordered_channel->isOpen()) {
                 json message = {
                     {"type", "keyup"},
                     {"key", fltk_to_browser_key(Fl::event_key())},
@@ -405,13 +422,15 @@ int VideoWindow::handle(int event) {
         break;
 
     case FL_KEYDOWN:
-        if (!conn_info.view_only && Fl::event_key() != FL_F + 9 && ordered_channel->isOpen()) {
-            json message = {
-                {"type", "keydown"},
-                {"key", fltk_to_browser_key(Fl::event_key())},
-            };
-            ordered_channel->send(message.dump());
-            return 1;
+        if (!conn_info.view_only) {
+            if (!is_key_shortcut(Fl::event_key()) && ordered_channel->isOpen()) {
+                json message = {
+                    {"type", "keydown"},
+                    {"key", fltk_to_browser_key(Fl::event_key())},
+                };
+                ordered_channel->send(message.dump());
+                return 1;
+            }
         }
         break;
 
@@ -462,4 +481,8 @@ void VideoWindow::position_in_video(int x, int y, int& x_ret, int& y_ret) {
         x_ret = x / ((double) window_width / video_info.width);
         y_ret = y / ((double) window_height / video_info.height);
     }
+}
+
+void VideoWindow::request_keyframe() {
+    video_track->requestKeyframe();
 }

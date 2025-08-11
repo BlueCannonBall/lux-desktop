@@ -169,14 +169,22 @@ MainWindow::MainWindow():
     menu_bar->add("File/Quit", 0, [](Fl_Widget*, void*) {
         exit(0);
     });
-    menu_bar->add("View/Fullscreen", 0, [](Fl_Widget*, void* data) {
+    menu_bar->add("View/Fullscreen", FL_F + 11, [](Fl_Widget*, void* data) {
         auto window = (MainWindow*) data;
-        window->refresh();
+        if (window->fullscreen_active()) {
+            window->fullscreen_off();
+        } else {
+            // window->tile->hide();
+            // window->menu_bar->hide();
+            window->fullscreen();
+        }
     },
         this);
-    menu_bar->add("View/Request Keyframe", 0, [](Fl_Widget*, void* data) {
+    menu_bar->add("View/Request Keyframe", FL_F + 5, [](Fl_Widget*, void* data) {
         auto window = (MainWindow*) data;
-        window->refresh();
+        if (window->video_window) {
+            window->video_window->request_keyframe();
+        }
     },
         this);
     menu_bar->add("View/Refresh", 0, [](Fl_Widget*, void* data) {

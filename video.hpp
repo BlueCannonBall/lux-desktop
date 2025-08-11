@@ -51,4 +51,5 @@ public:
     void draw() override;
     int handle(int event) override;
     void position_in_video(int x, int y, int& x_ret, int& y_ret);
+    void request_keyframe();
 };
