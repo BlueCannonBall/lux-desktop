@@ -10,6 +10,7 @@
 #else
     #include <X11/Xlib.h>
     #include <X11/extensions/XInput2.h>
+    #include <iostream>
 #endif
 
 #ifdef _WIN32
@@ -313,8 +314,11 @@ KeyboardGrabManager::~KeyboardGrabManager() {
 
 void KeyboardGrabManager::grab_keyboard() {
     if (!keyboard_grabbed) {
-        XGrabKeyboard(platform->display, platform->window, False, GrabModeAsync, GrabModeAsync, CurrentTime);
-        keyboard_grabbed = true;
+        if (int result = XGrabKeyboard(platform->display, platform->window, False, GrabModeAsync, GrabModeAsync, CurrentTime); result != GrabSuccess) {
+            std::cerr << "Error: Failed to grab keyboard: " << result << std::endl;
+        } else {
+            keyboard_grabbed = true;
+        }
     }
 }
 

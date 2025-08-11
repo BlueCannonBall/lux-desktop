@@ -5,6 +5,7 @@
 #include "json.hpp"
 #include "keys.hpp"
 #include "media_receiver.hpp"
+#include "ui.hpp"
 #include "waiter.hpp"
 #include <FL/fl_ask.H>
 #include <FL/x.H>
@@ -312,6 +313,8 @@ void VideoWindow::hide() {
     overlay = nullptr;
     gst_element_set_state(video_pipeline.get(), GST_STATE_NULL);
     gst_element_set_state(audio_pipeline.get(), GST_STATE_NULL);
+    video_pipeline.reset();
+    audio_pipeline.reset();
     playing = false;
 
     Fl_Window::hide();
@@ -321,18 +324,6 @@ void VideoWindow::hide() {
 void VideoWindow::draw() {
     if (overlay) {
         gst_video_overlay_expose(GST_VIDEO_OVERLAY(overlay));
-    }
-}
-
-static bool is_key_shortcut(int key) {
-    switch (key) {
-    case FL_F + 5:
-    case FL_F + 9:
-    case FL_F + 11:
-        return true;
-
-    default:
-        return false;
     }
 }
 
@@ -410,7 +401,7 @@ int VideoWindow::handle(int event) {
                     mouse_manager->lock_mouse();
                 }
                 return 1;
-            } else if (!is_key_shortcut(Fl::event_key()) && ordered_channel->isOpen()) {
+            } else if (!is_key_global_shortcut(Fl::event_key()) && ordered_channel->isOpen()) {
                 json message = {
                     {"type", "keyup"},
                     {"key", fltk_to_browser_key(Fl::event_key())},
@@ -422,27 +413,19 @@ int VideoWindow::handle(int event) {
         break;
 
     case FL_KEYDOWN:
-        if (!conn_info.view_only) {
-            if (!is_key_shortcut(Fl::event_key()) && ordered_channel->isOpen()) {
-                json message = {
-                    {"type", "keydown"},
-                    {"key", fltk_to_browser_key(Fl::event_key())},
-                };
-                ordered_channel->send(message.dump());
-                return 1;
-            }
-        }
-        break;
-
-    case FL_FOCUS:
-        if (!conn_info.view_only) {
+        if (!conn_info.view_only && !is_key_global_shortcut(Fl::event_key()) && ordered_channel->isOpen()) {
+            json message = {
+                {"type", "keydown"},
+                {"key", fltk_to_browser_key(Fl::event_key())},
+            };
+            ordered_channel->send(message.dump());
             return 1;
         }
         break;
 
+    case FL_FOCUS:
     case FL_UNFOCUS:
         if (!conn_info.view_only) {
-            keyboard_grab_manager->ungrab_keyboard();
             return 1;
         }
         break;
@@ -485,4 +468,11 @@ void VideoWindow::position_in_video(int x, int y, int& x_ret, int& y_ret) {
 
 void VideoWindow::request_keyframe() {
     video_track->requestKeyframe();
+}
+
+void VideoWindow::release_all_keys() {
+    json message = {
+        {"type", "releaseall"},
+    };
+    ordered_channel->send(message.dump());
 }

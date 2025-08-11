@@ -5,7 +5,6 @@
 #include "json.hpp"
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Return_Button.H>
-#include <FL/Fl_SVG_Image.H>
 #include <FL/fl_callback_macros.H>
 #include <FL/fl_message.H>
 #include <filesystem>
@@ -13,7 +12,7 @@
 #include <stdlib.h>
 #ifdef _WIN32
     #include "theme.hpp"
-    #include <Fl/x.H>
+    #include <FL/x.H>
 #endif
 
 using nlohmann::json;
@@ -169,15 +168,16 @@ MainWindow::MainWindow():
     menu_bar->add("File/Quit", 0, [](Fl_Widget*, void*) {
         exit(0);
     });
-    menu_bar->add("View/Fullscreen", FL_F + 11, [](Fl_Widget*, void* data) {
+    menu_bar->add("Edit/Release All Keys", 0, [](Fl_Widget*, void* data) {
         auto window = (MainWindow*) data;
-        if (window->fullscreen_active()) {
-            window->fullscreen_off();
-        } else {
-            // window->tile->hide();
-            // window->menu_bar->hide();
-            window->fullscreen();
+        if (window->video_window) {
+            window->video_window->release_all_keys();
         }
+    },
+        this);
+    menu_bar->add("View/Toggle Fullscreen", FL_F + 11, [](Fl_Widget*, void* data) {
+        auto window = (MainWindow*) data;
+        window->handle_toggle_fullscreen();
     },
         this);
     menu_bar->add("View/Request Keyframe", FL_F + 5, [](Fl_Widget*, void* data) {
@@ -224,6 +224,14 @@ void MainWindow::show() {
     Fl::flush();
     set_window_dark_mode(fl_xid(this));
 #endif
+}
+
+int MainWindow::handle(int event) {
+    if (event == FL_SHORTCUT && is_key_global_shortcut(Fl::event_key())) {
+        return menu_bar->handle(event); // Shortcuts should be handled by the menu bar even if it isn't visible
+    } else {
+        return Fl_Double_Window::handle(event);
+    }
 }
 
 void MainWindow::refresh() {
@@ -386,4 +394,18 @@ void MainWindow::handle_new_conn() {
     Fl::flush();
     set_window_dark_mode(fl_xid(window));
 #endif
+}
+
+void MainWindow::handle_toggle_fullscreen() {
+    if (fullscreen_active()) {
+        menu_bar->show();
+        conn_list->show();
+        fullscreen_off();
+        stage->resize(conn_list->x() + conn_list->w(), tile->y(), tile->w() - (conn_list->x() + conn_list->w()), tile->h());
+    } else {
+        menu_bar->hide();
+        conn_list->hide();
+        fullscreen();
+        stage->resize(tile->x(), tile->y(), tile->w(), tile->h());
+    }
 }

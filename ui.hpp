@@ -17,6 +17,18 @@
 #include <string>
 #include <vector>
 
+inline bool is_key_global_shortcut(int key) {
+    switch (key) {
+    case FL_F + 5:
+    case FL_F + 9:
+    case FL_F + 11:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
 class Stage : public Fl_Group {
 protected:
     Fl_Widget* centered = nullptr;
@@ -77,6 +89,7 @@ public:
     MainWindow();
 
     void show() override;
+    int handle(int event) override;
 
 protected:
     Fl_PNG_Image window_icon;
@@ -92,4 +105,5 @@ protected:
     void refresh();
     void handle_select_conn();
     void handle_new_conn();
+    void handle_toggle_fullscreen();
 };
