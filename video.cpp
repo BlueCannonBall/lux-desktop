@@ -67,6 +67,7 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
                     .unordered = true,
                 },
             });
+        file_manager = std::make_unique<FileManager>(conn->createDataChannel("file-io"));
     }
 
     {
@@ -483,8 +484,10 @@ void VideoWindow::request_keyframe() {
 }
 
 void VideoWindow::release_all_keys() {
-    json message = {
-        {"type", "releaseall"},
-    };
-    ordered_channel->send(message.dump());
+    if (!conn_info.view_only) {
+        json message = {
+            {"type", "releaseall"},
+        };
+        ordered_channel->send(message.dump());
+    }
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "connection.hpp"
+#include "file_manager.hpp"
 #include "glib.hpp"
 #include "input.hpp"
 #include <FL/Fl.H>
@@ -42,6 +43,8 @@ protected:
     static int system_event_handler(void* event, void* data);
 
 public:
+    std::unique_ptr<FileManager> file_manager;
+
     VideoWindow(int x, int y, int width, int height, ConnectionInfo conn_info);
 
     bool is_connected() const;

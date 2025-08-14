@@ -1,7 +1,6 @@
 #define NOMINMAX
 
 #include "ui.hpp"
-#include "icons/icon.h"
 #include "json.hpp"
 #include <FL/Fl_Box.H>
 #include <FL/fl_callback_macros.H>
@@ -150,10 +149,8 @@ ConnectionEditor::ConnectionEditor(int x, int y, int width, int height, const st
 }
 
 MainWindow::MainWindow():
-    Fl_Double_Window(1000, 650, "Lux Client"),
-    window_icon(nullptr, icons_icon_png, icons_icon_png_len) {
+    Fl_Double_Window(1000, 650, "Lux Client") {
     xclass("lux-desktop");
-    icon(&window_icon);
     size_range(500, 400);
 
     auto column = new Fl_Flex(0, 0, w(), h(), Fl_Flex::COLUMN);
@@ -164,8 +161,18 @@ MainWindow::MainWindow():
         window->handle_new_conn();
     },
         this);
+    menu_bar->add("File/Upload", 0, [](Fl_Widget*, void* data) {
+        auto window = (MainWindow*) data;
+        window->handle_upload();
+    },
+        this);
+    menu_bar->add("File/Download", 0, [](Fl_Widget*, void* data) {
+        auto window = (MainWindow*) data;
+        window->handle_download();
+    },
+        this);
     menu_bar->add("File/Quit", 0, [](Fl_Widget*, void*) {
-        exit(0);
+        exit(EXIT_SUCCESS);
     });
     menu_bar->add("Edit/Release All Keys", 0, [](Fl_Widget*, void* data) {
         auto window = (MainWindow*) data;
@@ -222,20 +229,19 @@ MainWindow::MainWindow():
     refresh();
 }
 
-void MainWindow::show() {
-    Fl_Double_Window::show();
-#ifdef _WIN32
-    Fl::flush();
-    set_window_dark_mode(fl_xid(this));
-#endif
-}
-
 int MainWindow::handle(int event) {
     if (event == FL_SHORTCUT && is_key_global_shortcut(Fl::event_key())) {
         return menu_bar->handle(event); // Shortcuts should be handled by the menu bar even if it isn't visible
     } else {
         return Fl_Double_Window::handle(event);
     }
+}
+
+void MainWindow::hide() {
+    // Ensure that file transfers are cleanly cancelled
+    conn_list->deselect();
+    handle_select_conn();
+    Fl_Double_Window::hide();
 }
 
 void MainWindow::refresh() {
@@ -357,8 +363,6 @@ void MainWindow::handle_select_conn() {
 
 void MainWindow::handle_new_conn() {
     auto window = new Fl_Double_Window(350, 295, "New Connection");
-    window->xclass("lux-desktop");
-    window->icon(&window_icon);
     window->size_range(350, 295, 0, 400);
     window->set_modal();
 
@@ -387,11 +391,18 @@ void MainWindow::handle_new_conn() {
         }
 
         window->hide();
+        Fl::delete_widget(window);
     });
 
     auto cancel_button = new Fl_Button(save_button->x() - 80, window->h() - 40, 75, 30, "Cancel");
     FL_INLINE_CALLBACK_1(cancel_button, Fl_Window*, window, window, {
         window->hide();
+        Fl::delete_widget(window);
+    });
+
+    window->callback([](Fl_Widget* window, void*) {
+        window->hide();
+        Fl::delete_widget(window);
     });
 
     window->end();
@@ -402,11 +413,33 @@ void MainWindow::handle_new_conn() {
 #endif
 }
 
+void MainWindow::handle_upload() {
+    if (video_window) {
+        if (video_window->file_manager) {
+            video_window->file_manager->upload();
+        } else {
+            fl_alert("Error: This connection is view-only.");
+        }
+    } else {
+        fl_alert("Error: There is no active connection");
+    }
+}
+
+void MainWindow::handle_download() {
+    if (video_window) {
+        if (video_window->file_manager) {
+            video_window->file_manager->download();
+        } else {
+            fl_alert("Error: This connection is view-only.");
+        }
+    } else {
+        fl_alert("Error: There is no active connection");
+    }
+}
+
 void MainWindow::handle_set_bitrate() {
     if (video_window) {
         auto window = new Fl_Double_Window(250, 85, "Set Bitrate");
-        window->xclass("lux-desktop");
-        window->icon(&window_icon);
         window->set_modal();
 
         auto row = new Fl_Flex(10, 10, window->w() - 20, window->h() - 55, Fl_Flex::ROW);
@@ -423,11 +456,18 @@ void MainWindow::handle_set_bitrate() {
         FL_INLINE_CALLBACK_3(ok_button, MainWindow*, main_window, this, Fl_Window*, window, window, Fl_Spinner*, bitrate_spinner, bitrate_spinner, {
             main_window->video_window->set_bitrate(bitrate_spinner->value());
             window->hide();
+            Fl::delete_widget(window);
         });
 
         auto cancel_button = new Fl_Button(ok_button->x() - 80, window->h() - 40, 75, 30, "Cancel");
         FL_INLINE_CALLBACK_1(cancel_button, Fl_Window*, window, window, {
             window->hide();
+            Fl::delete_widget(window);
+        });
+
+        window->callback([](Fl_Widget* window, void*) {
+            window->hide();
+            Fl::delete_widget(window);
         });
 
         window->end();

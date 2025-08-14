@@ -9,7 +9,6 @@
 #include <FL/Fl_Hold_Browser.H>
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Menu_Bar.H>
-#include <FL/Fl_PNG_Image.H>
 #include <FL/Fl_Secret_Input.H>
 #include <FL/Fl_Spinner.H>
 #include <FL/Fl_Tile.H>
@@ -39,6 +38,7 @@ public:
         Fl_Group(x, y, width, height, label) {
         align(FL_ALIGN_INSIDE | FL_ALIGN_CENTER);
         labelsize(18);
+        resizable(this);
     }
 
     Fl_Widget* get_centered() const {
@@ -88,11 +88,10 @@ class MainWindow : public Fl_Double_Window {
 public:
     MainWindow();
 
-    void show() override;
     int handle(int event) override;
+    void hide() override;
 
 protected:
-    Fl_PNG_Image window_icon;
     Fl_Menu_Bar* menu_bar;
     Fl_Tile* tile;
     Fl_Hold_Browser* conn_list;
@@ -105,6 +104,8 @@ protected:
     void refresh();
     void handle_select_conn();
     void handle_new_conn();
+    void handle_upload();
+    void handle_download();
     void handle_set_bitrate();
     void handle_toggle_fullscreen();
     static void check_ice_state(void* data);
