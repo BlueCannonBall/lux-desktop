@@ -56,7 +56,7 @@ void FileManager::on_buffered_amount_low() {
         buffered_amount_low_running = true;
 
         std::lock_guard<std::mutex> lock(mutex);
-        while (channel->bufferedAmount() <= chunk_size * 2 && !outgoing_transfers.empty()) {
+        while (channel->bufferedAmount() <= 512 * 1024 && !outgoing_transfers.empty()) {
             for (auto transfer_it = outgoing_transfers.begin(); transfer_it != outgoing_transfers.end();) {
                 if (transfer_it->second->progress_window) {
                     rtc::binary message(chunk_size + 4);
@@ -184,7 +184,7 @@ void FileManager::on_string_message(rtc::string message) {
                     },
                         true);
 
-                    while (channel->bufferedAmount() <= chunk_size * 2) {
+                    while (channel->bufferedAmount() <= 512 * 1024) {
                         rtc::binary message(chunk_size + 4);
                         if (transfer_it->second->file.read((char*) message.data() + 4, chunk_size).bad() && !transfer_it->second->file.eof()) {
                             uint32_t id = transfer_it->first;

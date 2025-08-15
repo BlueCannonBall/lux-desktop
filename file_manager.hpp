@@ -83,7 +83,7 @@ public:
     FileManager(std::shared_ptr<rtc::DataChannel> channel, uint64_t chunk_size = 16384):
         channel(std::move(channel)),
         chunk_size(chunk_size) {
-        this->channel->setBufferedAmountLowThreshold(chunk_size * 2);
+        this->channel->setBufferedAmountLowThreshold(256 * 1024);
         this->channel->onBufferedAmountLow(std::bind(&FileManager::on_buffered_amount_low, this));
         this->channel->onMessage(std::bind(&FileManager::on_binary_message, this, std::placeholders::_1), std::bind(&FileManager::on_string_message, this, std::placeholders::_1));
     }
