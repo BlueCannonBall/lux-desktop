@@ -58,7 +58,7 @@ void FileManager::on_buffered_amount_low() {
             rtc::binary message(chunk_size + 4);
             if (transfer_it->second->file.read((char*) message.data() + 4, chunk_size).bad() && !transfer_it->second->file.eof()) {
                 uint32_t id = transfer_it->first;
-                outgoing_transfers.erase(transfer_it);
+                transfer_it = outgoing_transfers.erase(transfer_it);
                 cancel_transfer(id);
                 awake([id]() {
                     fl_alert("Error: File transfer #%" PRIu32 " failed", id);
