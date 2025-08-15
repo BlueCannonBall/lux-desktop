@@ -59,8 +59,8 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
         video_track->requestBitrate(this->conn_info.bitrate * 1000);
     });
 
+    file_manager = std::make_unique<FileManager>(ordered_channel = conn->createDataChannel("ordered-input"));
     if (!this->conn_info.view_only) {
-        ordered_channel = conn->createDataChannel("ordered-input");
         unordered_channel = conn->createDataChannel("unordered-input",
             {
                 .reliability = {
@@ -68,7 +68,6 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
                 },
             });
     }
-    file_manager = std::make_unique<FileManager>(conn->createDataChannel("file-io"));
 
     {
         Waiter waiter;

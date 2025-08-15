@@ -20,7 +20,7 @@ using nlohmann::json;
 constexpr auto PROGRESS_UPDATE_INTERVAL = std::chrono::milliseconds(250);
 
 ProgressWindow::ProgressWindow(const std::string& path, uint64_t value, uint64_t size, std::function<void()> cancel_cb):
-    Fl_Double_Window(400, 120, "File Transfer") {
+    Fl_Double_Window(500, 120, "File Transfer") {
     auto path_box = new Fl_Box(10, 10, w() - 20, 30);
     path_box->copy_label(("Copying " + path + "...").c_str());
 
