@@ -8,6 +8,7 @@
 #include <gst/gst.h>
 #include <rtc/rtc.hpp>
 #ifdef _WIN32
+    #include <FL/x.H>
     #include <ios>
     #include <stdint.h>
     #include <stdio.h>

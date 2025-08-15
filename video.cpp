@@ -6,7 +6,7 @@
 #include "keys.hpp"
 #include "media_receiver.hpp"
 #include "ui.hpp"
-#include "waiter.hpp"
+#include "util.hpp"
 #include <FL/fl_ask.H>
 #include <FL/x.H>
 #include <gst/video/videooverlay.h>
@@ -67,8 +67,8 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
                     .unordered = true,
                 },
             });
-        file_manager = std::make_unique<FileManager>(conn->createDataChannel("file-io"));
     }
+    file_manager = std::make_unique<FileManager>(conn->createDataChannel("file-io"));
 
     {
         Waiter waiter;

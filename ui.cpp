@@ -370,7 +370,7 @@ void MainWindow::handle_new_conn() {
     window->resizable(conn_editor);
 
     auto save_button = new Fl_Button(window->w() - 85, window->h() - 40, 75, 30, "Save");
-    FL_INLINE_CALLBACK_3(save_button, MainWindow*, main_window, this, Fl_Window*, window, window, ConnectionEditor*, conn_editor, conn_editor, {
+    FL_INLINE_CALLBACK_3(save_button, MainWindow*, main_window, this, Fl_Double_Window*, window, window, ConnectionEditor*, conn_editor, conn_editor, {
         if (auto config_path = get_config_path(); !config_path.empty()) {
             auto conn_path = config_path / "connections";
             if (!std::filesystem::exists(conn_path)) {
@@ -395,7 +395,7 @@ void MainWindow::handle_new_conn() {
     });
 
     auto cancel_button = new Fl_Button(save_button->x() - 80, window->h() - 40, 75, 30, "Cancel");
-    FL_INLINE_CALLBACK_1(cancel_button, Fl_Window*, window, window, {
+    FL_INLINE_CALLBACK_1(cancel_button, Fl_Double_Window*, window, window, {
         window->hide();
         Fl::delete_widget(window);
     });
@@ -453,14 +453,14 @@ void MainWindow::handle_set_bitrate() {
         row->end();
 
         auto ok_button = new Fl_Button(window->w() - 85, window->h() - 40, 75, 30, "OK");
-        FL_INLINE_CALLBACK_3(ok_button, MainWindow*, main_window, this, Fl_Window*, window, window, Fl_Spinner*, bitrate_spinner, bitrate_spinner, {
+        FL_INLINE_CALLBACK_3(ok_button, MainWindow*, main_window, this, Fl_Double_Window*, window, window, Fl_Spinner*, bitrate_spinner, bitrate_spinner, {
             main_window->video_window->set_bitrate(bitrate_spinner->value());
             window->hide();
             Fl::delete_widget(window);
         });
 
         auto cancel_button = new Fl_Button(ok_button->x() - 80, window->h() - 40, 75, 30, "Cancel");
-        FL_INLINE_CALLBACK_1(cancel_button, Fl_Window*, window, window, {
+        FL_INLINE_CALLBACK_1(cancel_button, Fl_Double_Window*, window, window, {
             window->hide();
             Fl::delete_widget(window);
         });
