@@ -72,6 +72,7 @@ protected:
     uint32_t transfer_id = 0;
     std::unordered_map<uint32_t, std::shared_ptr<IncomingTransfer>> incoming_transfers;
     std::unordered_map<uint32_t, std::shared_ptr<OutgoingTransfer>> outgoing_transfers;
+    std::atomic<bool> buffered_amount_low_running = false;
 
     void on_buffered_amount_low();
     void on_binary_message(rtc::binary message);

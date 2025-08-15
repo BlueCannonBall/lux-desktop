@@ -52,46 +52,51 @@ void ProgressWindow::value(float value) {
 }
 
 void FileManager::on_buffered_amount_low() {
-    std::lock_guard<std::mutex> lock(mutex);
-    while (channel->bufferedAmount() <= chunk_size * 2 && !outgoing_transfers.empty()) {
-        for (auto transfer_it = outgoing_transfers.begin(); transfer_it != outgoing_transfers.end();) {
-            rtc::binary message(chunk_size + 4);
-            if (transfer_it->second->file.read((char*) message.data() + 4, chunk_size).bad() && !transfer_it->second->file.eof()) {
-                uint32_t id = transfer_it->first;
-                transfer_it = outgoing_transfers.erase(transfer_it);
-                cancel_transfer(id);
-                awake([id]() {
-                    fl_alert("Error: File transfer #%" PRIu32 " failed", id);
-                });
-                continue;
-            }
-            message.resize(transfer_it->second->file.gcount() + 4);
+    if (!buffered_amount_low_running) {
+        buffered_amount_low_running = true;
+
+        std::lock_guard<std::mutex> lock(mutex);
+        while (channel->bufferedAmount() <= chunk_size * 2 && !outgoing_transfers.empty()) {
+            for (auto transfer_it = outgoing_transfers.begin(); transfer_it != outgoing_transfers.end();) {
+                if (transfer_it->second->progress_window) {
+                    rtc::binary message(chunk_size + 4);
+                    if (transfer_it->second->file.read((char*) message.data() + 4, chunk_size).bad() && !transfer_it->second->file.eof()) {
+                        uint32_t id = transfer_it->first;
+                        transfer_it = outgoing_transfers.erase(transfer_it);
+                        cancel_transfer(id);
+                        awake([id]() {
+                            fl_alert("Error: File transfer #%" PRIu32 " failed", id);
+                        });
+                        continue;
+                    }
+                    message.resize(transfer_it->second->file.gcount() + 4);
 #if BYTE_ORDER == BIG_ENDIAN
-            memcpy(message.data(), &transfer_it->first, 4);
+                    memcpy(message.data(), &transfer_it->first, 4);
 #else
-            pw::reverse_memcpy(message.data(), &transfer_it->first, 4);
+                    pw::reverse_memcpy(message.data(), &transfer_it->first, 4);
 #endif
-            channel->send(std::move(message));
-            transfer_it->second->sent += transfer_it->second->file.gcount();
+                    channel->send(std::move(message));
+                    transfer_it->second->sent += transfer_it->second->file.gcount();
 
-            if (transfer_it->second->progress_window) {
-                if (auto now = std::chrono::steady_clock::now(); now - transfer_it->second->last_progress_update >= PROGRESS_UPDATE_INTERVAL) {
-                    awake([weak_transfer = std::weak_ptr<OutgoingTransfer>(transfer_it->second)]() {
-                        if (auto transfer = weak_transfer.lock()) {
-                            transfer->progress_window->value(transfer->sent);
-                        }
-                    });
-                    transfer_it->second->last_progress_update = now;
+                    if (auto now = std::chrono::steady_clock::now(); now - transfer_it->second->last_progress_update >= PROGRESS_UPDATE_INTERVAL) {
+                        awake([weak_transfer = std::weak_ptr<OutgoingTransfer>(transfer_it->second)]() {
+                            if (auto transfer = weak_transfer.lock()) {
+                                transfer->progress_window->value(transfer->sent);
+                            }
+                        });
+                        transfer_it->second->last_progress_update = now;
+                    }
+
+                    if (transfer_it->second->file.eof() || transfer_it->second->sent >= transfer_it->second->size) {
+                        transfer_it = outgoing_transfers.erase(transfer_it);
+                        continue;
+                    }
                 }
+                ++transfer_it;
             }
-
-            if (transfer_it->second->file.eof() || transfer_it->second->sent >= transfer_it->second->size) {
-                transfer_it = outgoing_transfers.erase(transfer_it);
-                continue;
-            }
-
-            ++transfer_it;
         }
+
+        buffered_amount_low_running = false;
     }
 }
 
@@ -199,15 +204,13 @@ void FileManager::on_string_message(rtc::string message) {
                         channel->send(std::move(message));
                         transfer_it->second->sent += transfer_it->second->file.gcount();
 
-                        if (transfer_it->second->progress_window) {
-                            if (auto now = std::chrono::steady_clock::now(); now - transfer_it->second->last_progress_update >= PROGRESS_UPDATE_INTERVAL) {
-                                awake([weak_transfer = std::weak_ptr<OutgoingTransfer>(transfer_it->second)]() {
-                                    if (auto transfer = weak_transfer.lock()) {
-                                        transfer->progress_window->value(transfer->sent);
-                                    }
-                                });
-                                transfer_it->second->last_progress_update = now;
-                            }
+                        if (auto now = std::chrono::steady_clock::now(); now - transfer_it->second->last_progress_update >= PROGRESS_UPDATE_INTERVAL) {
+                            awake([weak_transfer = std::weak_ptr<OutgoingTransfer>(transfer_it->second)]() {
+                                if (auto transfer = weak_transfer.lock()) {
+                                    transfer->progress_window->value(transfer->sent);
+                                }
+                            });
+                            transfer_it->second->last_progress_update = now;
                         }
 
                         if (transfer_it->second->file.eof() || transfer_it->second->sent >= transfer_it->second->size) {
