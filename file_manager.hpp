@@ -67,7 +67,7 @@ class FileManager {
 protected:
     std::shared_ptr<rtc::DataChannel> channel;
 
-    std::mutex mutex;
+    std::recursive_mutex mutex;
     uint64_t chunk_size;
     uint32_t transfer_id = 0;
     std::unordered_map<uint32_t, std::shared_ptr<IncomingTransfer>> incoming_transfers;
