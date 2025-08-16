@@ -62,7 +62,6 @@ libnice-dev = "*"
 "gstreamer1.0-gtk3" = "*"
 "gstreamer1.0-qt5" = "*"
 "gstreamer1.0-pulseaudio" = "*"
-libsdl2-dev = "*"
 
 [dist.github-custom-runners]
 global = "ubuntu-latest"
