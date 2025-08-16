@@ -246,7 +246,7 @@ FileManager::~FileManager() {
     channel->onMessage(nullptr, nullptr);
     channel->onBufferedAmountLow(nullptr);
 
-    std::lock_guard<std::recursive_mutex> lock(mutex);
+    std::unique_lock<std::recursive_mutex> lock(mutex);
     for (auto& transfer : incoming_transfers) {
         if (transfer.second->progress_window) {
             awake([&transfer]() {
@@ -267,6 +267,11 @@ FileManager::~FileManager() {
         }
         if (channel->isOpen()) cancel_transfer(transfer.first);
     }
+    incoming_transfers.clear();
+    outgoing_transfers.clear();
+    lock.unlock();
+
+    channel->close(); // This is the most robust way to ensure that no callbacks are running
 }
 
 void FileManager::upload() {
