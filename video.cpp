@@ -303,6 +303,20 @@ void VideoWindow::show() {
 }
 
 void VideoWindow::hide() {
+    conn->close();
+    connected = false;
+
+    overlay = nullptr;
+    if (video_pipeline) {
+        gst_element_set_state(video_pipeline.get(), GST_STATE_NULL);
+        video_pipeline.reset();
+    }
+    if (audio_pipeline) {
+        gst_element_set_state(audio_pipeline.get(), GST_STATE_NULL);
+        audio_pipeline.reset();
+    }
+    playing = false;
+
     if (!conn_info.view_only) {
         if (!conn_info.client_side_mouse) {
             Fl::remove_system_handler(&VideoWindow::system_event_handler);
@@ -311,18 +325,7 @@ void VideoWindow::hide() {
         keyboard_grab_manager.reset();
     }
 
-    video_track->onMessage(nullptr);
-    audio_track->onMessage(nullptr);
-
-    overlay = nullptr;
-    gst_element_set_state(video_pipeline.get(), GST_STATE_NULL);
-    gst_element_set_state(audio_pipeline.get(), GST_STATE_NULL);
-    video_pipeline.reset();
-    audio_pipeline.reset();
-    playing = false;
-
     Fl_Window::hide();
-    Fl::flush();
 }
 
 void VideoWindow::draw() {
@@ -364,6 +367,7 @@ int VideoWindow::handle(int event) {
     case FL_MOVE:
     case FL_DRAG:
         if (!conn_info.view_only) {
+            keyboard_grab_manager->grab_keyboard();
             if (conn_info.client_side_mouse) {
                 if (ordered_channel->isOpen()) {
                     int x;
@@ -429,14 +433,8 @@ int VideoWindow::handle(int event) {
 
     case FL_FOCUS:
     case FL_UNFOCUS:
-        if (!conn_info.view_only) {
-            return 1;
-        }
-        break;
-
     case FL_ENTER:
         if (!conn_info.view_only) {
-            keyboard_grab_manager->grab_keyboard();
             return 1;
         }
         break;

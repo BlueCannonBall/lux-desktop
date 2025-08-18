@@ -47,6 +47,10 @@ public:
 
     VideoWindow(int x, int y, int width, int height, ConnectionInfo conn_info);
 
+    ~VideoWindow() {
+        hide();
+    }
+
     bool is_connected() const;
     bool is_playing() const;
     rtc::PeerConnection::IceState ice_state() const;
