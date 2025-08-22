@@ -55,7 +55,7 @@ void FileManager::on_buffered_amount_low() {
     if (!buffered_amount_low_running) {
         buffered_amount_low_running = true;
 
-        std::lock_guard<std::recursive_mutex> lock(mutex);
+        std::lock_guard<std::mutex> lock(mutex);
         while (channel->bufferedAmount() <= 512 * 1024 && !outgoing_transfers.empty()) {
             for (auto transfer_it = outgoing_transfers.begin(); transfer_it != outgoing_transfers.end();) {
                 if (transfer_it->second->progress_window) {
@@ -101,7 +101,6 @@ void FileManager::on_buffered_amount_low() {
 }
 
 void FileManager::on_binary_message(rtc::binary message) {
-    std::lock_guard<std::recursive_mutex> lock(mutex);
     if (message.size() > 4) {
         uint32_t id;
 #if BYTE_ORDER == BIG_ENDIAN
@@ -110,6 +109,7 @@ void FileManager::on_binary_message(rtc::binary message) {
         pw::reverse_memcpy(&id, message.data(), 4);
 #endif
 
+        std::lock_guard<std::mutex> lock(mutex);
         if (auto transfer_it = incoming_transfers.find(id); transfer_it != incoming_transfers.end()) {
             if (transfer_it->second->file.write((const char*) message.data() + 4, message.size() - 4).fail()) {
                 uint32_t id = transfer_it->first;
@@ -142,7 +142,7 @@ void FileManager::on_binary_message(rtc::binary message) {
 }
 
 void FileManager::on_string_message(rtc::string message) {
-    std::lock_guard<std::recursive_mutex> lock(mutex);
+    std::lock_guard<std::mutex> lock(mutex);
     try {
         json message_json = json::parse(message);
         if (message_json["type"] == "transferready") {
@@ -152,7 +152,7 @@ void FileManager::on_string_message(rtc::string message) {
                     awake([this, id = transfer_it->first, weak_transfer = std::weak_ptr<IncomingTransfer>(transfer_it->second)]() {
                         if (auto transfer = weak_transfer.lock()) {
                             transfer->progress_window = new ProgressWindow(transfer->path, transfer->received, transfer->size, [this, id]() {
-                                std::lock_guard<std::recursive_mutex> lock(mutex);
+                                std::lock_guard<std::mutex> lock(mutex);
                                 incoming_transfers.erase(id);
                                 cancel_transfer(id);
                             });
@@ -170,7 +170,7 @@ void FileManager::on_string_message(rtc::string message) {
                     awake([this, id = transfer_it->first, weak_transfer = std::weak_ptr<OutgoingTransfer>(transfer_it->second)]() {
                         if (auto transfer = weak_transfer.lock()) {
                             transfer->progress_window = new ProgressWindow(transfer->path, transfer->sent, transfer->size, [this, id]() {
-                                std::lock_guard<std::recursive_mutex> lock(mutex);
+                                std::lock_guard<std::mutex> lock(mutex);
                                 outgoing_transfers.erase(id);
                                 cancel_transfer(id);
                             });
@@ -220,7 +220,6 @@ void FileManager::on_string_message(rtc::string message) {
                 }
             }
         } else if (message_json["type"] == "canceltransfer") {
-            std::unique_lock<std::recursive_mutex> lock(mutex);
             if (message_json["id"] < transfer_id) {
                 incoming_transfers.erase(message_json["id"]);
                 outgoing_transfers.erase(message_json["id"]);
@@ -246,7 +245,7 @@ FileManager::~FileManager() {
     channel->onMessage(nullptr, nullptr);
     channel->onBufferedAmountLow(nullptr);
 
-    std::unique_lock<std::recursive_mutex> lock(mutex);
+    std::unique_lock<std::mutex> lock(mutex);
     for (auto& transfer : incoming_transfers) {
         if (transfer.second->progress_window) {
             awake([&transfer]() {
