@@ -11,6 +11,7 @@ link-time-flags = "`fltk/build/fltk-config --use-images --ldstaticflags`"
 libraries = ["Xi", "X11", "ssl", "crypto"]
 static-libraries = [
     "libdatachannel/build/libdatachannel-static.a",
+    "libdatachannel/build/deps/libjuice/libjuice-static.a",
     "libdatachannel/build/deps/libsrtp/libsrtp2.a",
     "libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a",
 ]
@@ -23,7 +24,7 @@ preludes = [
     """,
     """ \
         cd libdatachannel && \
-        cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DUSE_NICE=1 -DNO_WEBSOCKET=1 && \
+        cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DNO_WEBSOCKET=1 && \
         "$(MAKE)" -C build datachannel-static \
     """,
 ]
@@ -42,6 +43,7 @@ static-libraries = [
     "fltk/build/lib/fltk_png.lib",
     "fltk/build/lib/fltk_z.lib",
     "libdatachannel/build/datachannel-static.lib",
+    "libdatachannel/build/deps/libjuice/juice-static.lib",
     "libdatachannel/build/deps/libsrtp/srtp2.lib",
     "libdatachannel/build/deps/usrsctp/usrsctplib/usrsctp.lib",
 ]

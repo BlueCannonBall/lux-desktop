@@ -38,6 +38,7 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
 
     rtc::Configuration config;
     config.iceServers.emplace_back("stun.l.google.com:19302");
+    config.enableIceTcp = true;
     conn = std::make_shared<rtc::PeerConnection>(config);
 
     {
@@ -109,6 +110,7 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
     try {
         json resp_json = json::parse(resp.body_string());
         json answer_json = json::parse(pw::base64_decode(resp_json["Offer"].get<std::string>()));
+        std::cerr << "Got SDP: " << answer_json["sdp"].get<std::string>() << std::endl;
         answer = std::make_unique<rtc::Description>(answer_json["sdp"].get<std::string>(), answer_json["type"].get<std::string>());
     } catch (const std::exception& e) {
         fl_alert("Failed to start streaming: Failed to parse server answer: %s", e.what());
