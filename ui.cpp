@@ -362,7 +362,7 @@ void MainWindow::handle_select_conn() {
 }
 
 void MainWindow::handle_new_conn() {
-    auto window = new Fl_Double_Window(350, 295, "New Connection");
+    auto window = new Fl_Double_Window(370, 295, "New Connection");
     window->size_range(350, 295, 0, 400);
     window->set_modal();
 
