@@ -27,20 +27,20 @@ endif
 
 c_compiler := $(CC)
 cpp_compiler := $(CXX)
-c_compilation_flags := $(CFLAGS) $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags gstreamer-video-1.0 gstreamer-1.0 gio-2.0 nice`
-cpp_compilation_flags := -Wall -std=c++20 -Ifltk/build -DRTC_ENABLE_WEBSOCKET=0 -DRTC_STATIC -O3 -pthread $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags gstreamer-video-1.0 gstreamer-1.0 gio-2.0 nice`
+c_compilation_flags := $(CFLAGS) $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags gstreamer-video-1.0 gstreamer-1.0 gio-2.0`
+cpp_compilation_flags := -Wall -std=c++20 -Ifltk/build -DRTC_ENABLE_WEBSOCKET=0 -DRTC_STATIC -O3 -pthread $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags gstreamer-video-1.0 gstreamer-1.0 gio-2.0`
 link_time_flags := `fltk/build/fltk-config --use-images --ldstaticflags`
-libraries := $(library_flag)Xi $(library_flag)X11 $(library_flag)ssl $(library_flag)crypto `pkg-config $(pkg_config_syntax) --libs gstreamer-video-1.0 gstreamer-1.0 gio-2.0 nice`
+libraries := $(library_flag)Xi $(library_flag)X11 $(library_flag)ssl $(library_flag)crypto `pkg-config $(pkg_config_syntax) --libs gstreamer-video-1.0 gstreamer-1.0 gio-2.0`
 static_libraries := libdatachannel/build/libdatachannel-static.a libdatachannel/build/deps/libjuice/libjuice-static.a libdatachannel/build/deps/libsrtp/libsrtp2.a libdatachannel/build/deps/usrsctp/usrsctplib/libusrsctp.a
 prefix := /usr/local/bin
 
 ifeq ($(OS),Windows_NT)
 	c_compiler := $(CC)
 	cpp_compiler := $(CXX)
-	c_compilation_flags := $(CFLAGS) $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags gstreamer-video-1.0 gstreamer-1.0 nice`
-	cpp_compilation_flags := /W3 /std:c++20 /EHsc /I"fltk/build" /I"$(OPENSSL_ROOT_DIR)"/include /DRTC_ENABLE_WEBSOCKET=0 /DRTC_STATIC /O2 $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags gstreamer-video-1.0 gstreamer-1.0 nice`
+	c_compilation_flags := $(CFLAGS) $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags gstreamer-video-1.0 gstreamer-1.0`
+	cpp_compilation_flags := /W3 /std:c++20 /EHsc /I"fltk/build" /I"$(OPENSSL_ROOT_DIR)"/include /DRTC_ENABLE_WEBSOCKET=0 /DRTC_STATIC /O2 $(include_path_flag)fltk $(include_path_flag)libdatachannel/include $(dynamic_flag) `pkg-config $(pkg_config_syntax) --cflags gstreamer-video-1.0 gstreamer-1.0`
 	link_time_flags := /SUBSYSTEM:WINDOWS $(library_path_flag)"$(OPENSSL_ROOT_DIR)"/lib
-	libraries := $(library_flag)libssl.lib $(library_flag)libcrypto.lib $(library_flag)crypt32.lib $(library_flag)iphlpapi.lib $(library_flag)dwmapi.lib $(library_flag)gdiplus.lib $(library_flag)shell32.lib $(library_flag)ole32.lib $(library_flag)oleaut32.lib $(library_flag)comdlg32.lib $(library_flag)winspool.lib $(library_flag)user32.lib $(library_flag)bcrypt.lib $(library_flag)kernel32.lib $(library_flag)gdi32.lib $(library_flag)advapi32.lib $(library_flag)comctl32.lib $(library_flag)imm32.lib $(library_flag)ws2_32.lib `pkg-config $(pkg_config_syntax) --libs gstreamer-video-1.0 gstreamer-1.0 nice`
+	libraries := $(library_flag)libssl.lib $(library_flag)libcrypto.lib $(library_flag)crypt32.lib $(library_flag)iphlpapi.lib $(library_flag)dwmapi.lib $(library_flag)gdiplus.lib $(library_flag)shell32.lib $(library_flag)ole32.lib $(library_flag)oleaut32.lib $(library_flag)comdlg32.lib $(library_flag)winspool.lib $(library_flag)user32.lib $(library_flag)bcrypt.lib $(library_flag)kernel32.lib $(library_flag)gdi32.lib $(library_flag)advapi32.lib $(library_flag)comctl32.lib $(library_flag)imm32.lib $(library_flag)ws2_32.lib `pkg-config $(pkg_config_syntax) --libs gstreamer-video-1.0 gstreamer-1.0`
 	static_libraries := fltk/build/lib/fltk.lib fltk/build/lib/fltk_images.lib fltk/build/lib/fltk_png.lib fltk/build/lib/fltk_z.lib libdatachannel/build/datachannel-static.lib libdatachannel/build/deps/libjuice/juice-static.lib libdatachannel/build/deps/libsrtp/srtp2.lib libdatachannel/build/deps/usrsctp/usrsctplib/usrsctp.lib
 	prefix := /usr/local/bin
 endif
