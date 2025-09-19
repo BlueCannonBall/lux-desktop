@@ -150,7 +150,7 @@ void VideoWindow::show() {
             mouse_manager = std::make_unique<RawMouseManager>(this);
             Fl::add_system_handler(&VideoWindow::system_event_handler, this);
         }
-        keyboard_grab_manager = std::make_unique<KeyboardGrabManager>(this);
+        keyboard_grab_manager = std::make_unique<KeyboardGrabManager>(top_window());
     }
 
     video_pipeline = gst_pipeline_new(nullptr);
@@ -378,7 +378,6 @@ int VideoWindow::handle(int event) {
     case FL_MOVE:
     case FL_DRAG:
         if (!conn_info.view_only) {
-            keyboard_grab_manager->grab_keyboard();
             if (conn_info.client_side_mouse) {
                 if (ordered_channel->isOpen()) {
                     int x;
@@ -443,9 +442,20 @@ int VideoWindow::handle(int event) {
         break;
 
     case FL_FOCUS:
+        if (!conn_info.view_only) {
+            return 1;
+        }
+        break;
+
     case FL_UNFOCUS:
+        if (!conn_info.view_only) {
+            return 1;
+        }
+        break;
+
     case FL_ENTER:
         if (!conn_info.view_only) {
+            keyboard_grab_manager->grab_keyboard();
             return 1;
         }
         break;
