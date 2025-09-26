@@ -24,7 +24,7 @@ preludes = [
     """,
     """ \
         cd libdatachannel && \
-        cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DNO_WEBSOCKET=1 && \
+        cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DNO_WEBSOCKET=1 -DDISABLE_CONSENT_FRESHNESS=1 && \
         "$(MAKE)" -C build datachannel-static \
     """,
 ]
