@@ -111,16 +111,7 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
     try {
         json resp_json = json::parse(resp.body_string());
         json answer_json = json::parse(pw::base64_decode(resp_json["Offer"].get<std::string>()));
-
-        std::ostringstream sdp_os(answer_json["sdp"].get<std::string>());
-        std::istringstream sdp_is(answer_json["sdp"].get<std::string>());
-        for (std::string line; std::getline(sdp_is, line);) {
-            if (line.find("typ host tcptype passive") == std::string::npos) {
-                sdp_os << line << std::endl;
-            }
-        }
-
-        answer = std::make_unique<rtc::Description>(sdp_os.str(), answer_json["type"].get<std::string>());
+        answer = std::make_unique<rtc::Description>(answer_json["sdp"].get<std::string>(), answer_json["type"].get<std::string>());
     } catch (const std::exception& e) {
         fl_alert("Failed to start streaming: Failed to parse server answer: %s", e.what());
         return;
