@@ -433,11 +433,6 @@ int VideoWindow::handle(int event) {
         break;
 
     case FL_FOCUS:
-        if (!conn_info.view_only) {
-            return 1;
-        }
-        break;
-
     case FL_UNFOCUS:
         if (!conn_info.view_only) {
             return 1;
@@ -446,7 +441,9 @@ int VideoWindow::handle(int event) {
 
     case FL_ENTER:
         if (!conn_info.view_only) {
-            keyboard_grab_manager->grab_keyboard();
+            if (Fl::focus()) {
+                keyboard_grab_manager->grab_keyboard();
+            }
             return 1;
         }
         break;
