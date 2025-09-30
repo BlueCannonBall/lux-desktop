@@ -107,9 +107,9 @@ std::string_view fltk_to_browser_key(int key) {
     case FL_Media_Stop: return "MediaStop";
     case FL_Media_Prev: return "MediaTrackPrevious";
     case FL_Media_Next: return "MediaTrackNext";
-    case FL_Volume_Up: return "AudioVolumeUp";
-    case FL_Volume_Down: return "AudioVolumeDown";
-    case FL_Volume_Mute: return "AudioVolumeMute";
+    // case FL_Volume_Up: return "AudioVolumeUp";
+    // case FL_Volume_Down: return "AudioVolumeDown";
+    // case FL_Volume_Mute: return "AudioVolumeMute";
 
     // International keys
     case FL_Yen: return "IntlYen";
