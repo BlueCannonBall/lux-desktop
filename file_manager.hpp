@@ -77,7 +77,7 @@ protected:
     void on_buffered_amount_low();
     void on_binary_message(rtc::binary message);
     void on_string_message(rtc::string message);
-    bool cancel_transfer(uint32_t id);
+    void cancel_transfer(uint32_t id);
 
 public:
     FileManager(std::shared_ptr<rtc::DataChannel> channel, uint64_t chunk_size = 16384):

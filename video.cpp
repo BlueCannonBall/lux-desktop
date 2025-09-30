@@ -305,6 +305,7 @@ void VideoWindow::show() {
 }
 
 void VideoWindow::hide() {
+    file_manager.reset();
     conn->close();
     connected = false;
 

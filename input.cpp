@@ -201,7 +201,8 @@ public:
 };
 
 RawMouseManager::RawMouseManager(Fl_Window* window):
-    platform(std::make_unique<Platform>(window)) {
+    platform(std::make_unique<Platform>(window)),
+    window(window) {
     XIEventMask masks[1];
     unsigned char mask[(XI_LASTEVENT + 7) / 8] = {0};
     masks[0].deviceid = XIAllMasterDevices;

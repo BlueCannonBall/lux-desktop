@@ -233,12 +233,14 @@ void FileManager::on_string_message(rtc::string message) {
     }
 }
 
-bool FileManager::cancel_transfer(uint32_t id) {
-    json message = {
-        {"type", "canceltransfer"},
-        {"id", id},
-    };
-    return channel->send(message.dump());
+void FileManager::cancel_transfer(uint32_t id) {
+    if (channel->isOpen()) {
+        json message = {
+            {"type", "canceltransfer"},
+            {"id", id},
+        };
+        channel->send(message.dump());
+    }
 }
 
 FileManager::~FileManager() {
@@ -254,7 +256,7 @@ FileManager::~FileManager() {
             },
                 true);
         }
-        if (channel->isOpen()) cancel_transfer(transfer.first);
+        cancel_transfer(transfer.first);
     }
     for (auto& transfer : outgoing_transfers) {
         if (transfer.second->progress_window) {
@@ -264,7 +266,7 @@ FileManager::~FileManager() {
             },
                 true);
         }
-        if (channel->isOpen()) cancel_transfer(transfer.first);
+        cancel_transfer(transfer.first);
     }
     incoming_transfers.clear();
     outgoing_transfers.clear();

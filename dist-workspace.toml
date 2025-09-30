@@ -5,7 +5,7 @@ members = ["dist:."]
 name = "lux-desktop"
 # (Optional) Descriptive text about your package; some installers will present this to users
 description = "A remote desktop client compatible with Tenebra."
-version = "1.1.0"
+version = "1.1.1"
 license = "GPL-3.0-only"
 repository = "https://github.com/BlueCannonBall/lux-desktop"
 binaries = ["lux-desktop"]
@@ -47,6 +47,7 @@ libdbus-1-dev = "*"
 libdecor-0-dev = "*"
 libssl-dev = "*"
 libnice-dev = "*"
+libxi-dev = "*"
 "libgstreamer1.0-dev" = "*"
 "libgstreamer-plugins-base1.0-dev" = "*"
 "libgstreamer-plugins-bad1.0-dev" = "*"
