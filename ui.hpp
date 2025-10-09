@@ -88,10 +88,17 @@ class MainWindow : public Fl_Double_Window {
 public:
     MainWindow();
 
+    ~MainWindow() {
+        if (!conn_list->parent()) {
+            delete conn_list;
+        }
+    }
+
     int handle(int event) override;
     void hide() override;
 
 protected:
+    Fl_Flex* column;
     Fl_Menu_Bar* menu_bar;
     Fl_Tile* tile;
     Fl_Hold_Browser* conn_list;

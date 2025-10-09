@@ -153,7 +153,7 @@ MainWindow::MainWindow():
     xclass("lux-desktop");
     size_range(500, 400);
 
-    auto column = new Fl_Flex(0, 0, w(), h(), Fl_Flex::COLUMN);
+    column = new Fl_Flex(0, 0, w(), h(), Fl_Flex::COLUMN);
 
     menu_bar = new Fl_Menu_Bar(0, 0, w(), 30);
     menu_bar->add("File/New Connection", FL_CTRL + 'n', [](Fl_Widget*, void* data) {
@@ -483,13 +483,18 @@ void MainWindow::handle_set_bitrate() {
 
 void MainWindow::handle_toggle_fullscreen() {
     if (fullscreen_active()) {
-        menu_bar->show();
-        conn_list->show();
         fullscreen_off();
+        menu_bar->show();
+        column->layout();
+        conn_list->resize(0, menu_bar->h(), 200, h() - menu_bar->h());
         stage->resize(conn_list->x() + conn_list->w(), tile->y(), tile->w() - (conn_list->x() + conn_list->w()), tile->h());
+        conn_list->show();
+        tile->insert(*conn_list, stage);
     } else {
         menu_bar->hide();
         conn_list->hide();
+        column->layout();
+        tile->remove(conn_list);
         fullscreen();
         stage->resize(tile->x(), tile->y(), tile->w(), tile->h());
     }
