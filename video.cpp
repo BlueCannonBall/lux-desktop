@@ -166,6 +166,9 @@ void VideoWindow::show() {
         },
             nullptr);
 
+        GstElement* rtpjitterbuffer = gst_element_factory_make("rtpjitterbuffer", nullptr);
+        g_object_set(rtpjitterbuffer, "latency", 0, nullptr);
+
         GstElement* rtph264depay = gst_element_factory_make("rtph264depay", nullptr);
 
 #ifdef _WIN32
@@ -209,6 +212,7 @@ void VideoWindow::show() {
 
         gst_bin_add_many(GST_BIN(video_pipeline.get()),
             appsrc,
+            rtpjitterbuffer,
             rtph264depay,
 #ifdef _WIN32
             h264parse,
@@ -218,6 +222,7 @@ void VideoWindow::show() {
             nullptr);
         if (!gst_element_link_many(
                 appsrc,
+                rtpjitterbuffer,
                 rtph264depay,
 #ifdef _WIN32
                 h264parse,
