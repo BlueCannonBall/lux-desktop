@@ -310,7 +310,20 @@ void VideoWindow::show() {
 }
 
 void VideoWindow::hide() {
+    if (!conn_info.view_only) {
+        if (!conn_info.client_side_mouse) {
+            Fl::remove_system_handler(&VideoWindow::system_event_handler);
+            mouse_manager.reset();
+        }
+        keyboard_grab_manager.reset();
+    }
     file_manager.reset();
+    if (ordered_channel->isOpen()) {
+        json message = {
+            {"type", "disconnect"},
+        };
+        ordered_channel->send(message.dump());
+    }
     conn->close();
     connected = false;
 
@@ -324,14 +337,6 @@ void VideoWindow::hide() {
         audio_pipeline.reset();
     }
     playing = false;
-
-    if (!conn_info.view_only) {
-        if (!conn_info.client_side_mouse) {
-            Fl::remove_system_handler(&VideoWindow::system_event_handler);
-            mouse_manager.reset();
-        }
-        keyboard_grab_manager.reset();
-    }
 
     Fl_Window::hide();
 }

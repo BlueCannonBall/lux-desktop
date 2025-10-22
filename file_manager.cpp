@@ -271,8 +271,6 @@ FileManager::~FileManager() {
     incoming_transfers.clear();
     outgoing_transfers.clear();
     lock.unlock();
-
-    channel->close(); // This is the most robust way to ensure that no callbacks are running
 }
 
 void FileManager::upload() {
