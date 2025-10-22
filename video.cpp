@@ -12,7 +12,6 @@
 #include <gst/video/videooverlay.h>
 #include <inttypes.h>
 #include <math.h>
-#include <sstream>
 
 using nlohmann::json;
 
