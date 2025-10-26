@@ -13,8 +13,6 @@
     #include <stdint.h>
     #include <stdio.h>
     #include <windows.h>
-#elif !defined(__APPLE__)
-    #include <stdlib.h>
 #endif
 
 using nlohmann::json;
@@ -28,8 +26,6 @@ int main(int argc, char* argv[]) {
         freopen_s(&fp, "CONIN$", "r", stdin);
         std::ios::sync_with_stdio();
     }
-#elif !defined(__APPLE__)
-    unsetenv("WAYLAND_DISPLAY"); // The video can't be displayed efficiently on Wayland, so Xwayland is forced
 #endif
 
     Fl::lock();

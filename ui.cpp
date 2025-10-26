@@ -149,7 +149,7 @@ ConnectionEditor::ConnectionEditor(int x, int y, int width, int height, const st
 }
 
 MainWindow::MainWindow():
-    Fl_Double_Window(1000, 650, "Lux Client") {
+    Fl_Double_Window(1100, 650, "Lux Client") {
     xclass("lux-desktop");
     size_range(500, 400);
 
@@ -204,7 +204,7 @@ MainWindow::MainWindow():
     },
         this);
     menu_bar->add("Help/About", 0, [](Fl_Widget*, void*) {
-        fl_message("lux-desktop 1.2.0\nCreated by BlueCannonBall\nGPLv3");
+        fl_message("lux-desktop 1.2.1\nCreated by BlueCannonBall\nGPLv3");
     });
     column->fixed(menu_bar, menu_bar->h());
 
@@ -213,7 +213,7 @@ MainWindow::MainWindow():
     conn_list = new Fl_Hold_Browser(0, menu_bar->h(), 200, h() - menu_bar->h());
     tile->size_range(conn_list, 100, 200);
 
-    stage = new Stage(200, menu_bar->h(), 800, h() - menu_bar->h(), "Select a connection to begin.");
+    stage = new Stage(200, menu_bar->h(), 900, h() - menu_bar->h(), "Select a connection to begin.");
     stage->box(FL_DOWN_BOX);
     stage->end();
     tile->size_range(stage, 370, 295);
