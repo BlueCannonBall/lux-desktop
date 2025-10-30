@@ -33,7 +33,7 @@ RawMouseManager::RawMouseManager(Fl_Window* window):
     device.usUsage = HID_USAGE_GENERIC_MOUSE;
     device.dwFlags = RIDEV_INPUTSINK;
     device.hwndTarget = platform->window;
-    assert(RegisterRawInputDevices(&device, 1, sizeof(device)));
+    assert(RegisterRawInputDevices(&device, 1, sizeof device));
 }
 
 RawMouseManager::~RawMouseManager() {
@@ -44,7 +44,7 @@ RawMouseManager::~RawMouseManager() {
     device.usUsage = HID_USAGE_GENERIC_MOUSE;
     device.dwFlags = RIDEV_REMOVE;
     device.hwndTarget = nullptr;
-    assert(RegisterRawInputDevices(&device, 1, sizeof(device)));
+    assert(RegisterRawInputDevices(&device, 1, sizeof device));
 }
 
 void RawMouseManager::lock_mouse() {
@@ -206,7 +206,7 @@ RawMouseManager::RawMouseManager(Fl_Window* window):
     XIEventMask masks[1];
     unsigned char mask[(XI_LASTEVENT + 7) / 8] = {0};
     masks[0].deviceid = XIAllMasterDevices;
-    masks[0].mask_len = sizeof(mask);
+    masks[0].mask_len = sizeof mask;
     masks[0].mask = mask;
     XISetMask(mask, XI_RawMotion);
     XISelectEvents(platform->display, DefaultRootWindow(platform->display), masks, 1);
@@ -219,7 +219,7 @@ RawMouseManager::~RawMouseManager() {
     XIEventMask masks[1];
     unsigned char mask[] = {0};
     masks[0].deviceid = XIAllMasterDevices;
-    masks[0].mask_len = sizeof(mask);
+    masks[0].mask_len = sizeof mask;
     masks[0].mask = mask;
     XISelectEvents(platform->display, DefaultRootWindow(platform->display), masks, 1);
     XFlush(platform->display);

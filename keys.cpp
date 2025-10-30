@@ -118,12 +118,12 @@ std::string_view fltk_to_browser_key(int key) {
         // Handle ranged keys (Numpad digits and Function keys)
         if (key >= (FL_KP + '0') && key <= (FL_KP + '9')) {
             static char buf[10];
-            snprintf(buf, sizeof(buf), "Numpad%d", key - FL_KP - '0');
+            snprintf(buf, sizeof buf, "Numpad%d", key - FL_KP - '0');
             return buf;
         }
         if (key >= FL_F && key <= FL_F_Last) {
             static char buf[5];
-            snprintf(buf, sizeof(buf), "F%d", key - FL_F);
+            snprintf(buf, sizeof buf, "F%d", key - FL_F);
             return buf;
         }
         // Numpad operators are also in a range

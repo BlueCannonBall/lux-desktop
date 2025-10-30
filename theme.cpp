@@ -17,7 +17,7 @@ bool is_dark_mode() {
                       0,
                       KEY_READ,
                       &key) == ERROR_SUCCESS) {
-        if (DWORD value, size = sizeof(value); RegQueryValueExA(key, "AppsUseLightTheme", nullptr, nullptr, (LPBYTE) &value, &size) == ERROR_SUCCESS) {
+        if (DWORD value, size = sizeof value; RegQueryValueExA(key, "AppsUseLightTheme", nullptr, nullptr, (LPBYTE) &value, &size) == ERROR_SUCCESS) {
             RegCloseKey(key);
             return !value;
         }
