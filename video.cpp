@@ -78,7 +78,10 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
             }
         });
         conn->setLocalDescription();
-        waiter.wait();
+        if (!waiter.wait_for(std::chrono::seconds(5))) {
+            fl_alert("Failed to connect: Timed out waiting for ICE gathering to complete");
+            return;
+        }
     }
 
     std::string offer;
@@ -98,7 +101,16 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
     };
 
     pw::HTTPResponse resp;
-    if (pw::fetch("POST", "https://" + this->conn_info.address + "/offer", resp, req_json.dump(), {{"Content-Type", "application/json"}}, {.verify_mode = this->conn_info.verify_certs ? SSL_VERIFY_PEER : SSL_VERIFY_NONE}) == PN_ERROR) {
+    if (pw::fetch("POST",
+            "https://" + this->conn_info.address + "/offer",
+            resp,
+            req_json.dump(),
+            {{"Content-Type", "application/json"}},
+            {
+                .send_timeout = std::chrono::seconds(5),
+                .recv_timeout = std::chrono::seconds(5),
+                .verify_mode = this->conn_info.verify_certs ? SSL_VERIFY_PEER : SSL_VERIFY_NONE,
+            }) == PN_ERROR) {
         fl_alert("Failed to connect: %s", pw::universal_strerror().c_str());
         return;
     } else if (resp.status_code != 200) {
