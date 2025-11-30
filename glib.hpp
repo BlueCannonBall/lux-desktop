@@ -11,8 +11,8 @@ namespace glib {
     template <typename... Args, typename T, typename F>
     unsigned long connect_signal(T* object, const std::string& signal_name, F&& handler) {
         GClosure* closure = g_cclosure_new(
-            G_CALLBACK(+[](T* object, Args&&... args, void* handler) {
-                return (*(std::decay_t<F>*) handler)(object, std::forward<Args>(args)...);
+            G_CALLBACK(+[](T* object, Args... args, void* handler) {
+                return (*(std::decay_t<F>*) handler)(object, args...);
             }),
             new std::decay_t<F>(std::forward<F>(handler)),
             [](void* data, GClosure*) {
