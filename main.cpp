@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     configure_fltk_colors();
     rtc::InitLogger(rtc::LogLevel::Debug);
     pn::init();
-    pw::threadpool.resize(0); // The threadpool is only used by Polyweb in server applications
+    pw::thread_pool.resize(0); // The threadpool is only used by Polyweb in server applications
     gst_init(&argc, &argv);
 
     Fl_PNG_Image icon(nullptr, icons_icon_png, icons_icon_png_len);
