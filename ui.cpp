@@ -204,7 +204,7 @@ MainWindow::MainWindow():
     },
         this);
     menu_bar->add("Help/About", 0, [](Fl_Widget*, void*) {
-        fl_message("lux-desktop 1.2.8\nCreated by BlueCannonBall\nGPLv3");
+        fl_message("lux-desktop 1.3.0\nCreated by BlueCannonBall\nGPLv3");
     });
     column->fixed(menu_bar, menu_bar->h());
 
@@ -287,6 +287,9 @@ void MainWindow::handle_select_conn() {
         new Fl_Box(0, 0, 0, 0); // Empty space
 
         auto delete_button = new Fl_Button(0, 0, 75, 0, "Delete");
+        delete_button->color(fl_rgb_color(220, 53, 69));
+        delete_button->selection_color(fl_rgb_color(200, 35, 51));
+        delete_button->labelcolor(FL_WHITE);
         FL_INLINE_CALLBACK_2(delete_button, MainWindow*, window, this, int, index, conn_list->value(), {
             auto conn_info = window->conn_editor->to_conn_info();
             if (auto config_path = get_config_path(); !config_path.empty()) {
@@ -329,6 +332,9 @@ void MainWindow::handle_select_conn() {
         row->fixed(save_button, save_button->w());
 
         auto connect_button = new Fl_Button(0, 0, 75, 0, "Connect");
+        connect_button->color(fl_rgb_color(0, 120, 215));
+        connect_button->selection_color(fl_rgb_color(0, 86, 179));
+        connect_button->labelcolor(FL_WHITE);
         FL_INLINE_CALLBACK_2(connect_button, MainWindow*, window, this, int, index, conn_list->value(), {
             window->video_window = new VideoWindow(0, 0, 400, 400, window->conn_editor->to_conn_info());
             if (!window->video_window->is_connected()) {
