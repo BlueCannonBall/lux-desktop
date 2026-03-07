@@ -204,7 +204,7 @@ MainWindow::MainWindow():
     },
         this);
     menu_bar->add("Help/About", 0, [](Fl_Widget*, void*) {
-        fl_message("lux-desktop 1.3.0\nCreated by BlueCannonBall\nGPLv3");
+        fl_message("lux-desktop 1.3.1\nCreated by BlueCannonBall\nGPLv3");
     });
     column->fixed(menu_bar, menu_bar->h());
 
@@ -376,6 +376,9 @@ void MainWindow::handle_new_conn() {
     window->resizable(conn_editor);
 
     auto save_button = new Fl_Button(window->w() - 85, window->h() - 40, 75, 30, "Save");
+    save_button->color(fl_rgb_color(0, 120, 215));
+    save_button->selection_color(fl_rgb_color(0, 86, 179));
+    save_button->labelcolor(FL_WHITE);
     FL_INLINE_CALLBACK_3(save_button, MainWindow*, main_window, this, Fl_Double_Window*, window, window, ConnectionEditor*, conn_editor, conn_editor, {
         if (auto config_path = get_config_path(); !config_path.empty()) {
             auto conn_path = config_path / "connections";
@@ -459,6 +462,9 @@ void MainWindow::handle_set_bitrate() {
         row->end();
 
         auto ok_button = new Fl_Button(window->w() - 85, window->h() - 40, 75, 30, "OK");
+        ok_button->color(fl_rgb_color(0, 120, 215));
+        ok_button->selection_color(fl_rgb_color(0, 86, 179));
+        ok_button->labelcolor(FL_WHITE);
         FL_INLINE_CALLBACK_3(ok_button, MainWindow*, main_window, this, Fl_Double_Window*, window, window, Fl_Spinner*, bitrate_spinner, bitrate_spinner, {
             main_window->video_window->set_bitrate(bitrate_spinner->value());
             window->hide();
