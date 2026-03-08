@@ -79,7 +79,7 @@ static void draw_dark_fltk_down_frame(int x, int y, int w, int h, Fl_Color c) {
 }
 
 static void draw_dark_fltk_down_box(int x, int y, int w, int h, Fl_Color c) {
-    draw_modern_box(x, y, w, h, c, fl_color_average(FL_WHITE, Fl::get_color(FL_BACKGROUND_COLOR), 0.12f));
+    draw_modern_box(x, y, w, h, c, fl_color_average(FL_WHITE, c, 0.12f));
 }
 
 static void draw_light_fltk_up_frame(int x, int y, int w, int h, Fl_Color c) {
