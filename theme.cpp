@@ -119,7 +119,7 @@ void configure_fltk_colors() {
         Fl::foreground(32, 32, 32);
         Fl::background(235, 235, 235);
         Fl::background2(255, 255, 255);
-        fl_contrast_level(75);
+        fl_contrast_level(50);
     }
     Fl::set_color(FL_SELECTION_COLOR, 0, 120, 215);
 }
