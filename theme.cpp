@@ -111,17 +111,17 @@ void configure_fltk_colors() {
         Fl::foreground(245, 245, 245);
         Fl::background(40, 40, 40);
         Fl::background2(24, 24, 24);
-        Fl::set_color(FL_SELECTION_COLOR, 0, 120, 215);
     } else {
         Fl::set_boxtype(FL_UP_BOX, draw_light_fltk_up_box, 2, 2, 4, 4);
         Fl::set_boxtype(FL_UP_FRAME, draw_light_fltk_up_frame, 2, 2, 4, 4);
         Fl::set_boxtype(FL_DOWN_BOX, draw_light_fltk_down_box, 2, 2, 4, 4);
         Fl::set_boxtype(FL_DOWN_FRAME, draw_light_fltk_down_frame, 2, 2, 4, 4);
         Fl::foreground(32, 32, 32);
-        Fl::background(235, 235, 235);  // Visibly gray so the white input fields starkly contrast against it
-        Fl::background2(255, 255, 255); // Pure stark white for entry fields
-        Fl::set_color(FL_SELECTION_COLOR, 7, 59, 165);
+        Fl::background(235, 235, 235);
+        Fl::background2(255, 255, 255);
+        fl_contrast_level(75);
     }
+    Fl::set_color(FL_SELECTION_COLOR, 0, 120, 215);
 }
 
 #ifdef _WIN32
