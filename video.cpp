@@ -481,21 +481,19 @@ int VideoWindow::handle(int event) {
 }
 
 void VideoWindow::position_in_video(int x, int y, int& x_ret, int& y_ret) {
-    int window_width = w();
-    int window_height = h();
+    double cw = w();
+    double ch = h();
 
     std::lock_guard<std::mutex> lock(video_info.mutex);
-    double video_aspect_ratio = (double) video_info.width / video_info.height;
-    double window_aspect_ratio = (double) window_width / window_height;
-    if (video_aspect_ratio > window_aspect_ratio) {
-        x_ret = x / ((double) window_width / video_info.width);
-        y_ret = (y - ((1. - window_aspect_ratio / video_aspect_ratio) * window_height / 2.)) / ((double) window_width / video_info.width);
-    } else if (video_aspect_ratio < window_aspect_ratio) {
-        x_ret = (x - ((1. - video_aspect_ratio / window_aspect_ratio) * window_width / 2.)) / ((double) window_height / video_info.height);
-        y_ret = y / ((double) window_height / video_info.height);
+    double vw = video_info.width;
+    double vh = video_info.height;
+
+    if (vw * ch > cw * vh) {
+        x_ret = x * vw / cw;
+        y_ret = (y - ch / 2.0) * vw / cw + vh / 2.0;
     } else {
-        x_ret = x / ((double) window_width / video_info.width);
-        y_ret = y / ((double) window_height / video_info.height);
+        x_ret = (x - cw / 2.0) * vh / ch + vw / 2.0;
+        y_ret = y * vh / ch;
     }
 }
 
