@@ -167,6 +167,7 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
             if (*cancel_token_copy) return;
             conn_copy->setRemoteDescription(*answer_shared);
             this->connected = true;
+            this->cursor(FL_CURSOR_DEFAULT);
         });
     }).detach();
 }
@@ -190,6 +191,10 @@ rtc::PeerConnection::IceState VideoWindow::ice_state() const {
 void VideoWindow::show() {
     Fl_Window::show();
     Fl::flush(); // Force the underlying OS window to be realized so that GStreamer can find it
+
+    if (!connected) {
+        cursor(FL_CURSOR_WAIT);
+    }
 
     if (!conn_info.view_only) {
         if (!conn_info.client_side_mouse) {
