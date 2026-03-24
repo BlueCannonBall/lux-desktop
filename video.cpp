@@ -70,69 +70,113 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
             });
     }
 
-    {
-        Waiter waiter;
-        conn->onGatheringStateChange([&waiter](rtc::PeerConnection::GatheringState state) {
-            if (state == rtc::PeerConnection::GatheringState::Complete) {
-                waiter.notify_one();
-            }
-        });
-        conn->setLocalDescription();
-        if (!waiter.wait_for(std::chrono::seconds(5))) {
-            fl_alert("Failed to connect: Timed out waiting for ICE gathering to complete");
+    cancel_token = std::make_shared<std::atomic<bool>>(false);
+    gathering_waiter = std::make_shared<Waiter>();
+
+    conn->onGatheringStateChange([gathering_waiter_ptr = gathering_waiter](rtc::PeerConnection::GatheringState state) {
+        if (state == rtc::PeerConnection::GatheringState::Complete) {
+            gathering_waiter_ptr->notify_one();
+        }
+    });
+    conn->setLocalDescription();
+
+    auto cancel_token_copy = cancel_token;
+    auto gathering_waiter_copy = gathering_waiter;
+    auto conn_info_copy = this->conn_info;
+    auto conn_copy = this->conn;
+
+    std::thread([this, cancel_token_copy, gathering_waiter_copy, conn_info_copy, conn_copy]() {
+        if (!gathering_waiter_copy->wait_for(std::chrono::seconds(5))) {
+            if (*cancel_token_copy) return;
+            awake([cancel_token_copy, this]() {
+                if (*cancel_token_copy) return;
+                this->connection_error = true;
+                fl_alert("Failed to connect: Timed out waiting for ICE gathering to complete");
+            });
             return;
         }
-    }
 
-    std::string offer;
-    {
-        auto description = conn->localDescription();
-        json offer_json = {
-            {"type", description->typeString()},
-            {"sdp", std::string(description.value())},
+        if (*cancel_token_copy) return;
+
+        std::string offer;
+        {
+            auto description = conn_copy->localDescription();
+            if (!description.has_value()) return;
+            json offer_json = {
+                {"type", description->typeString()},
+                {"sdp", std::string(description.value())},
+            };
+            offer = offer_json.dump();
+        }
+
+        json req_json = {
+            {"password", conn_info_copy.password},
+            {"show_mouse", conn_info_copy.view_only || !conn_info_copy.client_side_mouse},
+            {"offer", pw::base64_encode(offer.data(), offer.size())},
         };
-        offer = offer_json.dump();
-    }
 
-    json req_json = {
-        {"password", this->conn_info.password},
-        {"show_mouse", this->conn_info.view_only || !this->conn_info.client_side_mouse},
-        {"offer", pw::base64_encode(offer.data(), offer.size())},
-    };
+        pw::HTTPResponse resp;
+        if (pw::fetch("POST",
+                "https://" + conn_info_copy.address + "/offer",
+                resp,
+                req_json.dump(),
+                {{"Content-Type", "application/json"}},
+                {
+                    .send_timeout = std::chrono::seconds(5),
+                    .recv_timeout = std::chrono::seconds(5),
+                    .verify_mode = conn_info_copy.verify_certs ? SSL_VERIFY_PEER : SSL_VERIFY_NONE,
+                }) == PN_ERROR) {
+            if (*cancel_token_copy) return;
+            awake([cancel_token_copy, this, err = pw::universal_strerror()]() {
+                if (*cancel_token_copy) return;
+                this->connection_error = true;
+                fl_alert("Failed to connect: %s", err.c_str());
+            });
+            return;
+        } else if (resp.status_code != 200) {
+            if (*cancel_token_copy) return;
+            awake([cancel_token_copy, this, status_code = resp.status_code]() {
+                if (*cancel_token_copy) return;
+                this->connection_error = true;
+                fl_alert("Failed to login: Response has status code %" PRIu16, status_code);
+            });
+            return;
+        }
 
-    pw::HTTPResponse resp;
-    if (pw::fetch("POST",
-            "https://" + this->conn_info.address + "/offer",
-            resp,
-            req_json.dump(),
-            {{"Content-Type", "application/json"}},
-            {
-                .send_timeout = std::chrono::seconds(5),
-                .recv_timeout = std::chrono::seconds(5),
-                .verify_mode = this->conn_info.verify_certs ? SSL_VERIFY_PEER : SSL_VERIFY_NONE,
-            }) == PN_ERROR) {
-        fl_alert("Failed to connect: %s", pw::universal_strerror().c_str());
-        return;
-    } else if (resp.status_code != 200) {
-        fl_alert("Failed to login: Response has status code %" PRIu16, resp.status_code);
-        return;
-    }
+        if (*cancel_token_copy) return;
 
-    std::unique_ptr<rtc::Description> answer;
-    try {
-        json resp_json = json::parse(resp.body_string());
-        json answer_json = json::parse(pw::base64_decode(resp_json["Offer"].get<std::string>()));
-        answer = std::make_unique<rtc::Description>(answer_json["sdp"].get<std::string>(), answer_json["type"].get<std::string>());
-    } catch (const std::exception& e) {
-        fl_alert("Failed to start streaming: Failed to parse server answer: %s", e.what());
-        return;
-    }
-    conn->setRemoteDescription(*answer);
-    connected = true;
+        std::unique_ptr<rtc::Description> answer;
+        try {
+            json resp_json = json::parse(resp.body_string());
+            json answer_json = json::parse(pw::base64_decode(resp_json["Offer"].get<std::string>()));
+            answer = std::make_unique<rtc::Description>(answer_json["sdp"].get<std::string>(), answer_json["type"].get<std::string>());
+        } catch (const std::exception& e) {
+            if (*cancel_token_copy) return;
+            awake([cancel_token_copy, this, err = std::string(e.what())]() {
+                if (*cancel_token_copy) return;
+                this->connection_error = true;
+                fl_alert("Failed to start streaming: Failed to parse server answer: %s", err.c_str());
+            });
+            return;
+        }
+
+        if (*cancel_token_copy) return;
+
+        std::shared_ptr<rtc::Description> answer_shared = std::move(answer);
+        awake([cancel_token_copy, this, answer_shared, conn_copy]() {
+            if (*cancel_token_copy) return;
+            conn_copy->setRemoteDescription(*answer_shared);
+            this->connected = true;
+        });
+    }).detach();
 }
 
 bool VideoWindow::is_connected() const {
     return connected;
+}
+
+bool VideoWindow::has_connection_error() const {
+    return connection_error;
 }
 
 bool VideoWindow::is_playing() const {
@@ -321,6 +365,15 @@ void VideoWindow::show() {
 }
 
 void VideoWindow::hide() {
+    if (cancel_token) {
+        *cancel_token = true;
+        cancel_token.reset();
+    }
+    if (gathering_waiter) {
+        gathering_waiter->notify_all();
+        gathering_waiter.reset();
+    }
+
     if (!conn_info.view_only) {
         if (!conn_info.client_side_mouse) {
             Fl::remove_system_handler(&VideoWindow::system_event_handler);

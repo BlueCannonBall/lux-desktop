@@ -337,11 +337,6 @@ void MainWindow::handle_select_conn() {
         connect_button->labelcolor(FL_WHITE);
         FL_INLINE_CALLBACK_2(connect_button, MainWindow*, window, this, int, index, conn_list->value(), {
             window->video_window = new VideoWindow(0, 0, 400, 400, window->conn_editor->to_conn_info());
-            if (!window->video_window->is_connected()) {
-                delete window->video_window;
-                window->video_window = nullptr;
-                return;
-            }
 
             window->stage->set_centered(nullptr);
             delete window->conn_editor;
@@ -352,7 +347,8 @@ void MainWindow::handle_select_conn() {
             window->stage->set_fill(true);
             window->video_window->show();
             if (!window->video_window->is_playing()) {
-                window->refresh();
+                window->handle_select_conn();
+                return;
             }
             Fl::add_timeout(2., check_ice_state, window);
         });
@@ -514,13 +510,20 @@ void MainWindow::handle_toggle_fullscreen() {
 
 void MainWindow::check_ice_state(void* data) {
     auto window = (MainWindow*) data;
+
+    if (window->video_window->has_connection_error()) {
+        window->handle_select_conn();
+        return;
+    }
+
     if (auto ice_state = window->video_window->ice_state();
         ice_state == rtc::PeerConnection::IceState::Closed ||
         ice_state == rtc::PeerConnection::IceState::Disconnected ||
         ice_state == rtc::PeerConnection::IceState::Failed) {
         fl_message("The connection has closed.");
-        window->refresh();
-    } else {
-        Fl::repeat_timeout(2., check_ice_state, data);
+        window->handle_select_conn();
+        return;
     }
+
+    Fl::repeat_timeout(2., check_ice_state, data);
 }

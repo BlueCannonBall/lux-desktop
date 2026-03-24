@@ -4,12 +4,13 @@
 #include "file_manager.hpp"
 #include "glib.hpp"
 #include "input.hpp"
+#include "util.hpp"
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 #include <assert.h>
+#include <atomic>
 #include <gst/gst.h>
 #include <gst/video/videooverlay.h>
-#include <memory>
 #include <mutex>
 #include <rtc/rtc.hpp>
 
@@ -39,6 +40,10 @@ protected:
 
     bool connected = false;
     bool playing = false;
+    bool connection_error = false;
+
+    std::shared_ptr<std::atomic<bool>> cancel_token;
+    std::shared_ptr<Waiter> gathering_waiter;
 
     static int system_event_handler(void* event, void* data);
 
@@ -53,6 +58,7 @@ public:
 
     bool is_connected() const;
     bool is_playing() const;
+    bool has_connection_error() const;
     rtc::PeerConnection::IceState ice_state() const;
     void show() override;
     void hide() override;
