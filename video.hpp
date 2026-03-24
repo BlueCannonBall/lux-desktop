@@ -67,6 +67,7 @@ public:
     void show() override;
     void hide() override;
     void draw() override;
+    void flush() override;
     int handle(int event) override;
     void position_in_video(int x, int y, int& x_ret, int& y_ret);
     unsigned int get_bitrate() const;

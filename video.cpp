@@ -202,7 +202,7 @@ rtc::PeerConnection::IceState VideoWindow::ice_state() const {
 }
 
 void VideoWindow::show() {
-    Fl_Window::show();
+    Fl_Double_Window::show();
     Fl::flush(); // Force the underlying OS window to be realized so that GStreamer can find it
 
     Fl::add_timeout(1.0 / 60.0, loading_timer_callback, this);
@@ -420,17 +420,25 @@ void VideoWindow::hide() {
     }
     playing = false;
 
-    Fl_Window::hide();
+    Fl_Double_Window::hide();
 }
 
 void VideoWindow::draw() {
-    Fl_Window::draw();
     if (!connected) {
+        Fl_Double_Window::draw();
         fl_font(labelfont(), 18);
         fl_color(fl_color_average(labelcolor(), color(), 0.65f + 0.35f * std::sin(loading_timer_ticks * (3.14159265f / 60.0f))));
         fl_draw("Connecting...", 0, 0, w(), h(), FL_ALIGN_CENTER);
     } else if (overlay) {
         gst_video_overlay_expose(GST_VIDEO_OVERLAY(overlay));
+    }
+}
+
+void VideoWindow::flush() {
+    if (connected) {
+        Fl_Window::flush();
+    } else {
+        Fl_Double_Window::flush();
     }
 }
 
@@ -555,7 +563,7 @@ int VideoWindow::handle(int event) {
             break;
         }
     }
-    return Fl_Window::handle(event);
+    return Fl_Double_Window::handle(event);
 }
 
 void VideoWindow::position_in_video(int x, int y, int& x_ret, int& y_ret) {
