@@ -38,8 +38,6 @@ protected:
     class Platform;
     std::unique_ptr<Platform> platform;
 
-    Fl_Window* window;
-
 public:
     bool keyboard_grabbed = false;
 

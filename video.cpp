@@ -8,10 +8,11 @@
 #include "ui.hpp"
 #include "util.hpp"
 #include <FL/fl_ask.H>
+#include <FL/fl_draw.H>
 #include <FL/x.H>
+#include <cmath>
 #include <gst/video/videooverlay.h>
 #include <inttypes.h>
-#include <math.h>
 
 using nlohmann::json;
 
@@ -21,8 +22,8 @@ int VideoWindow::system_event_handler(void* event, void* data) {
     if (parsed_event.has_value() && window->unordered_channel->isOpen()) {
         json message = {
             {"type", "mousemove"},
-            {"x", (int) round(parsed_event->x)},
-            {"y", (int) round(parsed_event->y)},
+            {"x", (int) std::round(parsed_event->x)},
+            {"y", (int) std::round(parsed_event->y)},
         };
         window->unordered_channel->send(message.dump());
         return 1;
@@ -30,8 +31,17 @@ int VideoWindow::system_event_handler(void* event, void* data) {
     return 0;
 }
 
+void VideoWindow::loading_timer_callback(void* data) {
+    auto window = (VideoWindow*) data;
+    if (!window->connected) {
+        ++window->loading_timer_ticks;
+        window->redraw();
+        Fl::repeat_timeout(1.0 / 60.0, loading_timer_callback, data);
+    }
+}
+
 VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo conn_info):
-    Fl_Window(x, y, width, height),
+    Fl_Double_Window(x, y, width, height),
     conn_info(std::move(conn_info)) {
     resizable(this);
     end(); // No child widgets!
@@ -61,7 +71,7 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
     });
 
     file_manager = std::make_unique<FileManager>(ordered_channel = conn->createDataChannel("ordered-input"));
-    if (!this->conn_info.view_only) {
+    if (!conn_info.view_only) {
         unordered_channel = conn->createDataChannel("unordered-input",
             {
                 .reliability = {
@@ -83,14 +93,14 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
     auto cancel_token_copy = cancel_token;
     auto gathering_waiter_copy = gathering_waiter;
     auto conn_info_copy = this->conn_info;
-    auto conn_copy = this->conn;
+    auto conn_copy = conn;
 
     std::thread([this, cancel_token_copy, gathering_waiter_copy, conn_info_copy, conn_copy]() {
         if (!gathering_waiter_copy->wait_for(std::chrono::seconds(5))) {
             if (*cancel_token_copy) return;
             awake([cancel_token_copy, this]() {
                 if (*cancel_token_copy) return;
-                this->connection_error = true;
+                connection_error = true;
                 fl_alert("Failed to connect: Timed out waiting for ICE gathering to complete");
             });
             return;
@@ -129,7 +139,7 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
             if (*cancel_token_copy) return;
             awake([cancel_token_copy, this, err = pw::universal_strerror()]() {
                 if (*cancel_token_copy) return;
-                this->connection_error = true;
+                connection_error = true;
                 fl_alert("Failed to connect: %s", err.c_str());
             });
             return;
@@ -137,7 +147,7 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
             if (*cancel_token_copy) return;
             awake([cancel_token_copy, this, status_code = resp.status_code]() {
                 if (*cancel_token_copy) return;
-                this->connection_error = true;
+                connection_error = true;
                 fl_alert("Failed to login: Response has status code %" PRIu16, status_code);
             });
             return;
@@ -154,7 +164,7 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
             if (*cancel_token_copy) return;
             awake([cancel_token_copy, this, err = std::string(e.what())]() {
                 if (*cancel_token_copy) return;
-                this->connection_error = true;
+                connection_error = true;
                 fl_alert("Failed to start streaming: Failed to parse server answer: %s", err.c_str());
             });
             return;
@@ -166,8 +176,11 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
         awake([cancel_token_copy, this, answer_shared, conn_copy]() {
             if (*cancel_token_copy) return;
             conn_copy->setRemoteDescription(*answer_shared);
-            this->connected = true;
-            this->cursor(FL_CURSOR_DEFAULT);
+            connected = true;
+            redraw();
+            if (!this->conn_info.view_only && Fl::belowmouse() == this && Fl::focus()) {
+                keyboard_grab_manager->grab_keyboard();
+            }
         });
     }).detach();
 }
@@ -192,9 +205,7 @@ void VideoWindow::show() {
     Fl_Window::show();
     Fl::flush(); // Force the underlying OS window to be realized so that GStreamer can find it
 
-    if (!connected) {
-        cursor(FL_CURSOR_WAIT);
-    }
+    Fl::add_timeout(1.0 / 60.0, loading_timer_callback, this);
 
     if (!conn_info.view_only) {
         if (!conn_info.client_side_mouse) {
@@ -370,6 +381,8 @@ void VideoWindow::show() {
 }
 
 void VideoWindow::hide() {
+    Fl::remove_timeout(loading_timer_callback, this);
+
     if (cancel_token) {
         *cancel_token = true;
         cancel_token.reset();
@@ -411,129 +424,136 @@ void VideoWindow::hide() {
 }
 
 void VideoWindow::draw() {
-    if (overlay) {
+    Fl_Window::draw();
+    if (!connected) {
+        fl_font(labelfont(), 18);
+        fl_color(fl_color_average(labelcolor(), color(), 0.65f + 0.35f * std::sin(loading_timer_ticks * (3.14159265f / 60.0f))));
+        fl_draw("Connecting...", 0, 0, w(), h(), FL_ALIGN_CENTER);
+    } else if (overlay) {
         gst_video_overlay_expose(GST_VIDEO_OVERLAY(overlay));
     }
 }
 
 int VideoWindow::handle(int event) {
-    switch (event) {
-    case FL_PUSH:
-        take_focus();
-        if (!conn_info.view_only) {
-            if (!conn_info.client_side_mouse && !mouse_manager->mouse_locked) {
-                mouse_manager->lock_mouse();
-                return 1;
-            } else if (ordered_channel->isOpen()) {
+    if (connected) {
+        switch (event) {
+        case FL_PUSH:
+            take_focus();
+            if (!conn_info.view_only) {
+                if (!conn_info.client_side_mouse && !mouse_manager->mouse_locked) {
+                    mouse_manager->lock_mouse();
+                    return 1;
+                } else if (ordered_channel->isOpen()) {
+                    json message = {
+                        {"type", "mousedown"},
+                        {"button", Fl::event_button() - 1},
+                    };
+                    ordered_channel->send(message.dump());
+                    return 1;
+                }
+            }
+            break;
+
+        case FL_RELEASE:
+            if (!conn_info.view_only && ordered_channel->isOpen()) {
                 json message = {
-                    {"type", "mousedown"},
+                    {"type", "mouseup"},
                     {"button", Fl::event_button() - 1},
                 };
                 ordered_channel->send(message.dump());
                 return 1;
             }
-        }
-        break;
+            break;
 
-    case FL_RELEASE:
-        if (!conn_info.view_only && ordered_channel->isOpen()) {
-            json message = {
-                {"type", "mouseup"},
-                {"button", Fl::event_button() - 1},
-            };
-            ordered_channel->send(message.dump());
-            return 1;
-        }
-        break;
+        case FL_MOVE:
+        case FL_DRAG:
+            if (!conn_info.view_only) {
+                if (conn_info.client_side_mouse) {
+                    if (ordered_channel->isOpen()) {
+                        int x;
+                        int y;
+                        position_in_video(Fl::event_x(), Fl::event_y(), x, y);
 
-    case FL_MOVE:
-    case FL_DRAG:
-        if (!conn_info.view_only) {
-            if (conn_info.client_side_mouse) {
-                if (ordered_channel->isOpen()) {
-                    int x;
-                    int y;
-                    position_in_video(Fl::event_x(), Fl::event_y(), x, y);
+                        json message = {
+                            {"type", "mousemoveabs"},
+                            {"x", x},
+                            {"y", y},
+                        };
+                        ordered_channel->send(message.dump());
+                        return 1;
+                    }
+                } else {
+                    return 1; // This is handled by the RawMouseManager
+                }
+            }
+            break;
 
+        case FL_MOUSEWHEEL:
+            if (!conn_info.view_only && unordered_channel->isOpen()) {
+                json message = {
+                    {"type", "wheel"},
+                    {"x", (int) std::round(Fl::event_dx() * 120.0)},
+                    {"y", (int) std::round(Fl::event_dy() * 120.0)},
+                };
+                unordered_channel->send(message.dump());
+                return 1;
+            }
+            break;
+
+        case FL_KEYUP:
+            if (!conn_info.view_only) {
+                if (!conn_info.client_side_mouse && Fl::event_key() == FL_F + 9) {
+                    if (mouse_manager->mouse_locked) {
+                        mouse_manager->unlock_mouse();
+                    } else {
+                        mouse_manager->lock_mouse();
+                    }
+                    return 1;
+                } else if (!is_key_global_shortcut(Fl::event_key()) && ordered_channel->isOpen()) {
                     json message = {
-                        {"type", "mousemoveabs"},
-                        {"x", x},
-                        {"y", y},
+                        {"type", "keyup"},
+                        {"key", fltk_to_browser_key(Fl::event_key())},
                     };
                     ordered_channel->send(message.dump());
                     return 1;
                 }
-            } else {
-                return 1; // This is handled by the RawMouseManager
             }
-        }
-        break;
+            break;
 
-    case FL_MOUSEWHEEL:
-        if (!conn_info.view_only && unordered_channel->isOpen()) {
-            json message = {
-                {"type", "wheel"},
-                {"x", (int) roundf(Fl::event_dx() * 120.)},
-                {"y", (int) roundf(Fl::event_dy() * 120.)},
-            };
-            unordered_channel->send(message.dump());
-            return 1;
-        }
-        break;
-
-    case FL_KEYUP:
-        if (!conn_info.view_only) {
-            if (!conn_info.client_side_mouse && Fl::event_key() == FL_F + 9) {
-                if (mouse_manager->mouse_locked) {
-                    mouse_manager->unlock_mouse();
-                } else {
-                    mouse_manager->lock_mouse();
-                }
-                return 1;
-            } else if (!is_key_global_shortcut(Fl::event_key()) && ordered_channel->isOpen()) {
+        case FL_KEYDOWN:
+            if (!conn_info.view_only && !is_key_global_shortcut(Fl::event_key()) && ordered_channel->isOpen()) {
                 json message = {
-                    {"type", "keyup"},
+                    {"type", "keydown"},
                     {"key", fltk_to_browser_key(Fl::event_key())},
                 };
                 ordered_channel->send(message.dump());
                 return 1;
             }
-        }
-        break;
+            break;
 
-    case FL_KEYDOWN:
-        if (!conn_info.view_only && !is_key_global_shortcut(Fl::event_key()) && ordered_channel->isOpen()) {
-            json message = {
-                {"type", "keydown"},
-                {"key", fltk_to_browser_key(Fl::event_key())},
-            };
-            ordered_channel->send(message.dump());
-            return 1;
-        }
-        break;
-
-    case FL_FOCUS:
-    case FL_UNFOCUS:
-        if (!conn_info.view_only) {
-            return 1;
-        }
-        break;
-
-    case FL_ENTER:
-        if (!conn_info.view_only) {
-            if (Fl::focus()) {
-                keyboard_grab_manager->grab_keyboard();
+        case FL_FOCUS:
+        case FL_UNFOCUS:
+            if (!conn_info.view_only) {
+                return 1;
             }
-            return 1;
-        }
-        break;
+            break;
 
-    case FL_LEAVE:
-        if (!conn_info.view_only) {
-            keyboard_grab_manager->ungrab_keyboard();
-            return 1;
+        case FL_ENTER:
+            if (!conn_info.view_only) {
+                if (Fl::focus()) {
+                    keyboard_grab_manager->grab_keyboard();
+                }
+                return 1;
+            }
+            break;
+
+        case FL_LEAVE:
+            if (!conn_info.view_only) {
+                keyboard_grab_manager->ungrab_keyboard();
+                return 1;
+            }
+            break;
         }
-        break;
     }
     return Fl_Window::handle(event);
 }

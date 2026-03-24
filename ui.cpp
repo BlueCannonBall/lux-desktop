@@ -350,7 +350,7 @@ void MainWindow::handle_select_conn() {
                 window->handle_select_conn();
                 return;
             }
-            Fl::add_timeout(2., check_ice_state, window);
+            Fl::add_timeout(1.0, check_ice_state, window);
         });
         row->fixed(connect_button, connect_button->w());
 
@@ -525,5 +525,5 @@ void MainWindow::check_ice_state(void* data) {
         return;
     }
 
-    Fl::repeat_timeout(2., check_ice_state, data);
+    Fl::repeat_timeout(1.0, check_ice_state, data);
 }

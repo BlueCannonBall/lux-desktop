@@ -6,7 +6,7 @@
 #include "input.hpp"
 #include "util.hpp"
 #include <FL/Fl.H>
-#include <FL/Fl_Window.H>
+#include <FL/Fl_Double_Window.H>
 #include <assert.h>
 #include <atomic>
 #include <gst/gst.h>
@@ -20,7 +20,7 @@ struct VideoInfo {
     int height;
 };
 
-class VideoWindow : public Fl_Window {
+class VideoWindow : public Fl_Double_Window {
 protected:
     ConnectionInfo conn_info;
 
@@ -44,6 +44,10 @@ protected:
 
     std::shared_ptr<std::atomic<bool>> cancel_token;
     std::shared_ptr<Waiter> gathering_waiter;
+
+    unsigned int loading_timer_ticks = 0;
+
+    static void loading_timer_callback(void* data);
 
     static int system_event_handler(void* event, void* data);
 

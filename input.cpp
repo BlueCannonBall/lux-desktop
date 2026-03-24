@@ -112,10 +112,10 @@ private:
     static void post_key(WORD vkCode, UINT type, bool extended) {
         UINT scancode = MapVirtualKey(vkCode, MAPVK_VK_TO_VSC);
         LPARAM lParam = 1 | (scancode << 16); // Repeat count = 1
-        if (extended) lParam |= (1 << 24);
+        if (extended) lParam |= (1U << 24);
         if (type == WM_KEYUP || type == WM_SYSKEYUP) {
-            lParam |= (1 << 31); // Transition (up)
-            lParam |= (1 << 30); // Previous state
+            lParam |= (1U << 31); // Transition (up)
+            lParam |= (1U << 30); // Previous state
         }
         PostMessage(window, type, vkCode, lParam);
     }
