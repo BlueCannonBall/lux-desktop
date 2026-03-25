@@ -7,6 +7,7 @@
 #include <FL/fl_message.H>
 #include <filesystem>
 #include <fstream>
+#include <stdio.h>
 #include <stdlib.h>
 #ifdef _WIN32
     #include "theme.hpp"
@@ -33,6 +34,44 @@ std::filesystem::path get_config_path() {
     }
 #endif
     return ret;
+}
+
+static int hex_value(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+static std::string escape_filename(std::string_view name) {
+    std::string safe_filename;
+    for (char c : name) {
+        if (c == '<' || c == '>' || c == ':' || c == '"' || c == '/' || c == '\\' || c == '|' || c == '?' || c == '*' || c == '%' || (unsigned char) c < 32) {
+            char buf[5];
+            snprintf(buf, sizeof(buf), "%%%02X", (unsigned char) c);
+            safe_filename += buf;
+        } else {
+            safe_filename += c;
+        }
+    }
+    return safe_filename;
+}
+
+static std::string unescape_filename(std::string_view filename) {
+    std::string result;
+    for (size_t i = 0; i < filename.length(); ++i) {
+        if (filename[i] == '%' && i + 2 < filename.length()) {
+            int h1 = hex_value(filename[i + 1]);
+            int h2 = hex_value(filename[i + 2]);
+            if (h1 != -1 && h2 != -1) {
+                result += (char) ((h1 << 4) | h2);
+                i += 2;
+                continue;
+            }
+        }
+        result += filename[i];
+    }
+    return result;
 }
 
 // A label widget designed for use with Fl_Flex
@@ -204,7 +243,7 @@ MainWindow::MainWindow():
     },
         this);
     menu_bar->add("Help/About", 0, [](Fl_Widget*, void*) {
-        fl_message("lux-desktop 1.4.3\nCreated by BlueCannonBall\nGPLv3");
+        fl_message("lux-desktop 1.4.4\nCreated by BlueCannonBall\nGPLv3");
     });
     column->fixed(menu_bar, menu_bar->h());
 
@@ -257,7 +296,7 @@ void MainWindow::refresh() {
                 if (entry.path().extension() == ".json") {
                     if (std::ifstream file(entry.path()); file.is_open()) {
                         auto& conn_info = connections.emplace_back(std::make_unique<ConnectionInfo>(json::parse(file)));
-                        conn_list->add(("@b" + entry.path().stem().string()).c_str(), conn_info.get());
+                        conn_list->add(("@b" + unescape_filename(entry.path().stem().string())).c_str(), conn_info.get());
                     }
                 }
             }
@@ -275,7 +314,7 @@ void MainWindow::handle_select_conn() {
     video_window = nullptr;
 
     if (conn_list->value()) {
-        label((std::string(conn_list->text(conn_list->value())).substr(2) + " - Lux Client").c_str());
+        copy_label((std::string(conn_list->text(conn_list->value())).substr(2) + " - Lux Client").c_str());
         stage->begin();
 
         conn_editor = new ConnectionEditor(0, 0, 350, 275, std::string(conn_list->text(conn_list->value())).substr(2), *(ConnectionInfo*) conn_list->data(conn_list->value()));
@@ -297,7 +336,7 @@ void MainWindow::handle_select_conn() {
                 if (!std::filesystem::exists(conn_path)) {
                     std::filesystem::create_directory(conn_path);
                 } else {
-                    std::filesystem::remove(conn_path / (std::string(window->conn_list->text(index)).substr(2) + ".json"));
+                    std::filesystem::remove(conn_path / (escape_filename(std::string(window->conn_list->text(index)).substr(2)) + ".json"));
                     window->refresh();
                 }
             }
@@ -312,7 +351,7 @@ void MainWindow::handle_select_conn() {
                     std::filesystem::create_directory(conn_path);
                 }
 
-                if (std::ofstream file(conn_path / (window->conn_editor->name() + ".json")); file.is_open()) {
+                if (std::ofstream file(conn_path / (escape_filename(window->conn_editor->name()) + ".json")); file.is_open()) {
                     ConnectionInfo conn_info;
                     file << (conn_info = window->conn_editor->to_conn_info()).to_json();
                     file.close();
@@ -324,8 +363,9 @@ void MainWindow::handle_select_conn() {
                 }
 
                 if (window->conn_editor->name() != std::string(window->conn_list->text(index)).substr(2)) {
-                    std::filesystem::remove((conn_path / std::string(window->conn_list->text(index)).substr(2)).replace_extension(".json"));
+                    std::filesystem::remove((conn_path / escape_filename(std::string(window->conn_list->text(index)).substr(2))).replace_extension(".json"));
                     window->conn_list->text(index, ("@b" + window->conn_editor->name()).c_str());
+                    window->copy_label((window->conn_editor->name() + " - Lux Client").c_str());
                 }
             }
         });
@@ -382,7 +422,7 @@ void MainWindow::handle_new_conn() {
                 std::filesystem::create_directory(conn_path);
             }
 
-            if (std::ofstream file((conn_path / conn_editor->name()).replace_extension(".json")); file.is_open()) {
+            if (std::ofstream file((conn_path / escape_filename(conn_editor->name())).replace_extension(".json")); file.is_open()) {
                 file << conn_editor->to_conn_info().to_json();
                 file.close();
                 main_window->refresh();
