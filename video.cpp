@@ -426,8 +426,62 @@ void VideoWindow::hide() {
 void VideoWindow::draw() {
     if (!connected) {
         Fl_Double_Window::draw();
+
+        int text_w = 0, text_h = 0;
         fl_font(labelfont(), 18);
-        fl_color(fl_color_average(labelcolor(), color(), 0.65f + 0.35f * std::sin(loading_timer_ticks * (3.14159265f / 60.0f))));
+        fl_measure("Connecting...", text_w, text_h);
+
+        int spinner_size = (int) (text_h * 0.75);
+        int margin = 12;
+        int spinner_x = w() / 2 - text_w / 2 - margin - spinner_size;
+        int spinner_y = h() / 2 - spinner_size / 2;
+
+        double time = loading_timer_ticks / 60.0;
+        double cycle_duration = 1.5;
+        double cycle_count_d = time / cycle_duration;
+        int cycle_count = (int) cycle_count_d;
+        double progress = cycle_count_d - cycle_count;
+
+        double head_angle, tail_angle;
+        if (progress < 0.5) {
+            double sub_progress = progress * 2.0;
+            double eased = 0.5 * (1.0 - std::cos(sub_progress * 3.14159265));
+            head_angle = eased * 270.0;
+            tail_angle = 0.0;
+        } else {
+            double sub_progress = (progress - 0.5) * 2.0;
+            double eased = 0.5 * (1.0 - std::cos(sub_progress * 3.14159265));
+            head_angle = 270.0;
+            tail_angle = eased * 270.0;
+        }
+
+        head_angle += 45.0;
+
+        double cycle_offset = cycle_count * 270.0;
+        double continuous_rotation = time * 360.0 * 0.75;
+
+        // Calculate absolute head angle in CW direction
+        double cw_head_total = cycle_offset + head_angle + continuous_rotation;
+
+        // Prevent X11 XDrawArc overflow by keeping angle under 360 degrees.
+        // X11 represents angles in 1/64ths of a degree within a 16-bit short integer.
+        // It overflows at 32768 / 64 = 512 degrees!
+        double cw_head = std::fmod(cw_head_total, 360.0);
+        if (cw_head < 0) cw_head += 360.0;
+
+        double arc_len = head_angle - tail_angle;
+
+        double a1 = -cw_head;
+        double a2 = a1 + arc_len;
+
+        fl_line_style(FL_SOLID, 3, nullptr);
+        fl_color(fl_color_average(labelcolor(), color(), 0.75f));
+
+        fl_arc(spinner_x, spinner_y, spinner_size, spinner_size, a1, a2);
+        fl_line_style(0);
+
+        fl_font(labelfont(), 18);
+        fl_color(labelcolor());
         fl_draw("Connecting...", 0, 0, w(), h(), FL_ALIGN_CENTER);
     } else if (overlay) {
         gst_video_overlay_expose(GST_VIDEO_OVERLAY(overlay));

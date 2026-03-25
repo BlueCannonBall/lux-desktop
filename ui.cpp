@@ -243,7 +243,7 @@ MainWindow::MainWindow():
     },
         this);
     menu_bar->add("Help/About", 0, [](Fl_Widget*, void*) {
-        fl_message("lux-desktop 1.4.4\nCreated by BlueCannonBall\nGPLv3");
+        fl_message("lux-desktop 1.4.5\nCreated by BlueCannonBall\nGPLv3");
     });
     column->fixed(menu_bar, menu_bar->h());
 
