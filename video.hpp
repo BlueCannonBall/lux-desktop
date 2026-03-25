@@ -9,6 +9,7 @@
 #include <FL/Fl_Double_Window.H>
 #include <assert.h>
 #include <atomic>
+#include <chrono>
 #include <gst/gst.h>
 #include <gst/video/videooverlay.h>
 #include <mutex>
@@ -45,7 +46,7 @@ protected:
     std::shared_ptr<std::atomic<bool>> cancel_token;
     std::shared_ptr<Waiter> gathering_waiter;
 
-    unsigned int loading_timer_ticks = 0;
+    std::chrono::steady_clock::time_point loading_start_time;
 
     static void loading_timer_callback(void* data);
 

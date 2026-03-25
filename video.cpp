@@ -34,7 +34,6 @@ int VideoWindow::system_event_handler(void* event, void* data) {
 void VideoWindow::loading_timer_callback(void* data) {
     auto window = (VideoWindow*) data;
     if (!window->connected) {
-        ++window->loading_timer_ticks;
         window->redraw();
         Fl::repeat_timeout(1.0 / 60.0, loading_timer_callback, data);
     }
@@ -177,7 +176,6 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
             if (*cancel_token_copy) return;
             conn_copy->setRemoteDescription(*answer_shared);
             connected = true;
-            redraw();
             if (!this->conn_info.view_only && Fl::belowmouse() == this && Fl::focus()) {
                 keyboard_grab_manager->grab_keyboard();
             }
@@ -205,6 +203,7 @@ void VideoWindow::show() {
     Fl_Double_Window::show();
     Fl::flush(); // Force the underlying OS window to be realized so that GStreamer can find it
 
+    loading_start_time = std::chrono::steady_clock::now();
     Fl::add_timeout(1.0 / 60.0, loading_timer_callback, this);
 
     if (!conn_info.view_only) {
@@ -436,7 +435,7 @@ void VideoWindow::draw() {
         int spinner_x = w() / 2 - text_w / 2 - margin - spinner_size;
         int spinner_y = h() / 2 - spinner_size / 2;
 
-        double time = loading_timer_ticks / 60.0;
+        double time = std::chrono::duration<double>(std::chrono::steady_clock::now() - loading_start_time).count();
         double cycle_duration = 1.5;
         double cycle_count_d = time / cycle_duration;
         int cycle_count = (int) cycle_count_d;
