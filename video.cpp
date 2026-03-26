@@ -423,7 +423,7 @@ void VideoWindow::hide() {
 }
 
 void VideoWindow::draw() {
-    if (!connected) {
+    if (!connected || !playing) {
         Fl_Double_Window::draw();
 
         int text_w = 0, text_h = 0;
@@ -488,7 +488,7 @@ void VideoWindow::draw() {
 }
 
 void VideoWindow::flush() {
-    if (connected) {
+    if (connected && playing) {
         Fl_Window::flush();
     } else {
         Fl_Double_Window::flush();
