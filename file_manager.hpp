@@ -92,4 +92,8 @@ public:
 
     void upload();
     void download();
+
+    bool ready() const {
+        return channel->isOpen();
+    }
 };

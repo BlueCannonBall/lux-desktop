@@ -461,9 +461,13 @@ void MainWindow::handle_new_conn() {
 void MainWindow::handle_upload() {
     if (video_window) {
         if (video_window->file_manager) {
-            video_window->file_manager->upload();
+            if (video_window->file_manager->ready()) {
+                video_window->file_manager->upload();
+            } else {
+                fl_alert("Error: There is no active connection");
+            }
         } else {
-            fl_alert("Error: This connection is view-only.");
+            fl_alert("Error: This connection is view-only");
         }
     } else {
         fl_alert("Error: There is no active connection");
@@ -473,9 +477,13 @@ void MainWindow::handle_upload() {
 void MainWindow::handle_download() {
     if (video_window) {
         if (video_window->file_manager) {
-            video_window->file_manager->download();
+            if (video_window->file_manager->ready()) {
+                video_window->file_manager->download();
+            } else {
+                fl_alert("Error: There is no active connection");
+            }
         } else {
-            fl_alert("Error: This connection is view-only.");
+            fl_alert("Error: This connection is view-only");
         }
     } else {
         fl_alert("Error: There is no active connection");
