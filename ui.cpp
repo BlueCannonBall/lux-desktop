@@ -232,7 +232,7 @@ MainWindow::MainWindow():
         this);
     menu_bar->add("View/Request Keyframe", FL_F + 5, [](Fl_Widget*, void* data) {
         auto window = (MainWindow*) data;
-        if (window->video_window) {
+        if (window->video_window && video_window->is_connected()) {
             window->video_window->request_keyframe();
         }
     },
@@ -491,7 +491,7 @@ void MainWindow::handle_download() {
 }
 
 void MainWindow::handle_set_bitrate() {
-    if (video_window) {
+    if (video_window && video_window->is_connected()) {
         auto window = new Fl_Double_Window(250, 85, "Set Bitrate");
         window->set_modal();
 
