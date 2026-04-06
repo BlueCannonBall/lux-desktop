@@ -232,7 +232,7 @@ MainWindow::MainWindow():
         this);
     menu_bar->add("View/Request Keyframe", FL_F + 5, [](Fl_Widget*, void* data) {
         auto window = (MainWindow*) data;
-        if (window->video_window && video_window->is_connected()) {
+        if (window->video_window && window->video_window->is_connected()) {
             window->video_window->request_keyframe();
         }
     },
@@ -243,7 +243,7 @@ MainWindow::MainWindow():
     },
         this);
     menu_bar->add("Help/About", 0, [](Fl_Widget*, void*) {
-        fl_message("lux-desktop 1.4.6\nCreated by BlueCannonBall\nGPLv3");
+        fl_message("lux-desktop 1.4.7\nCreated by BlueCannonBall\nGPLv3");
     });
     column->fixed(menu_bar, menu_bar->h());
 
