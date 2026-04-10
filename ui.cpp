@@ -566,7 +566,6 @@ void MainWindow::check_ice_state(void* data) {
 
     if (auto ice_state = window->video_window->ice_state();
         ice_state == rtc::PeerConnection::IceState::Closed ||
-        ice_state == rtc::PeerConnection::IceState::Disconnected ||
         ice_state == rtc::PeerConnection::IceState::Failed) {
         fl_message("The connection has closed.");
         window->handle_select_conn();
