@@ -125,7 +125,7 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
         };
 
         pw::HTTPResponse resp;
-        if (pw::fetch("POST",
+        if (auto fetch_res = pw::fetch("POST",
                 "https://" + conn_info_copy.address + "/offer",
                 resp,
                 req_json.dump(),
@@ -134,9 +134,9 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
                     .send_timeout = std::chrono::seconds(5),
                     .recv_timeout = std::chrono::seconds(5),
                     .verify_mode = conn_info_copy.verify_certs ? SSL_VERIFY_PEER : SSL_VERIFY_NONE,
-                }) == PN_ERROR) {
+                }); !fetch_res) {
             if (*cancel_token_copy) return;
-            awake([cancel_token_copy, this, err = pw::universal_strerror()]() {
+            awake([cancel_token_copy, this, err = fetch_res.error().message()]() {
                 if (*cancel_token_copy) return;
                 connection_error = true;
                 fl_alert("Failed to connect: %s", err.c_str());

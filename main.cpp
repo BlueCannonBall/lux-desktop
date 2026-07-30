@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
     Fl::visual(FL_DOUBLE | FL_INDEX);
     configure_fltk_colors();
     rtc::InitLogger(rtc::LogLevel::Debug);
-    pn::init();
+    (void)pn::init();
     pw::thread_pool.resize(0); // The threadpool is only used by Polyweb in server applications
     gst_init(&argc, &argv);
 
