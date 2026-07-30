@@ -4,7 +4,6 @@
 #include "video.hpp"
 #include "json.hpp"
 #include "keys.hpp"
-#include "media_receiver.hpp"
 #include "ui.hpp"
 #include "util.hpp"
 #include <FL/fl_ask.H>
@@ -62,8 +61,8 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
         audio_track = conn->addTrack(audio);
     }
 
-    video_track->setMediaHandler(std::make_shared<MediaReceiver>());
-    audio_track->setMediaHandler(std::make_shared<MediaReceiver>());
+    video_track->setMediaHandler(std::make_shared<rtc::RtcpReceivingSession>());
+    audio_track->setMediaHandler(std::make_shared<rtc::RtcpReceivingSession>());
 
     video_track->onOpen([this]() {
         video_track->requestBitrate(this->conn_info.bitrate * 1000);
