@@ -42,6 +42,7 @@ protected:
     bool connected = false;
     bool playing = false;
     bool connection_error = false;
+    bool pointer_inside = false; // Tracked from FL_ENTER/FL_LEAVE for the focus handler
 
     std::shared_ptr<std::atomic<bool>> cancel_token;
     std::shared_ptr<Waiter> gathering_waiter;
@@ -49,6 +50,15 @@ protected:
     std::chrono::steady_clock::time_point loading_start_time;
 
     static void loading_timer_callback(void* data);
+
+    // Releases the grab if we are holding it while unfocused. A backstop, not the
+    // primary mechanism: the focus events below are meant to catch that, but they
+    // have proven easy to miss, and this bounds the damage to one interval
+    static void grab_reconcile_callback(void* data);
+
+    // Whether the keyboard grab is currently warranted, from authoritative state
+    // rather than from whichever event last arrived
+    bool should_grab_keyboard() const;
 
     static int system_event_handler(void* event, void* data);
 

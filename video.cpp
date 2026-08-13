@@ -16,19 +16,95 @@
 
 using nlohmann::json;
 
+bool VideoWindow::should_grab_keyboard() const {
+    if (conn_info.view_only || !pointer_inside) {
+        return false;
+    }
+#ifdef _WIN32
+    return Fl::focus() != nullptr;
+#else
+    // Ask X, rather than trusting Fl::focus(). FLTK derives that from every
+    // FocusOut it receives, including the ones emitted when *any* client grabs the
+    // keyboard, so it flickers whenever the window manager's task switcher takes
+    // the keyboard -- precisely when we must not decide we have focus
+    Fl_Window* window = top_window();
+    if (!window) {
+        return false;
+    }
+    Window focus_window = None;
+    int revert = 0;
+    XGetInputFocus(fl_x11_display(), &focus_window, &revert);
+    return focus_window == fl_xid(window);
+#endif
+}
+
+void VideoWindow::grab_reconcile_callback(void* data) {
+    auto window = (VideoWindow*) data;
+    // Only asks X when we believe we hold the grab, so this costs nothing otherwise
+    if (window->keyboard_grab_manager && window->keyboard_grab_manager->keyboard_grabbed && !window->should_grab_keyboard()) {
+        // Logged because this firing means the focus handling above missed a
+        // transition and the grab was stuck: silence here is the evidence that the
+        // real fix is holding, and noise is the evidence that it is not
+        std::cerr << "Warning: keyboard was grabbed while unfocused, releasing "
+                     "(the focus handling missed a transition)"
+                  << std::endl;
+        window->keyboard_grab_manager->ungrab_keyboard();
+        window->release_all_keys();
+    }
+    Fl::repeat_timeout(1.0, grab_reconcile_callback, data);
+}
+
 int VideoWindow::system_event_handler(void* event, void* data) {
     auto window = (VideoWindow*) data;
-    auto parsed_event = window->mouse_manager->parse_event(event);
-    if (parsed_event.has_value()) {
-        json message = {
-            {"type", "mousemove"},
-            {"x", (int) std::round(parsed_event->x)},
-            {"y", (int) std::round(parsed_event->y)},
-        };
-        if (try_send(window->unordered_channel, message.dump())) {
-            return 1;
+
+#ifndef _WIN32
+    // The grab is otherwise tied to pointer crossing alone, so switching away
+    // without moving the pointer leaves it held, and XGrabKeyboard with
+    // owner_events=False then swallows every keystroke on the whole display.
+    //
+    // FLTK is no help: it maps every FocusIn/FocusOut to FL_FOCUS/FL_UNFOCUS and
+    // discards xfocus.mode, so our own grab's focus events look identical to real
+    // ones and reacting to them oscillates. Only NotifyWhileGrabbed means focus
+    // genuinely moved while we held the keyboard; NotifyGrab and NotifyUngrab are
+    // emitted by the grab and ungrab themselves.
+    //
+    // Deliberately asymmetric: quick to release, reluctant to take. Failing to
+    // re-grab just means one mouse move to restore capture, whereas grabbing while
+    // unfocused is the bug this exists to fix
+    if (window->keyboard_grab_manager) {
+        auto x11_event = (XEvent*) event;
+        if (x11_event->type == FocusOut && x11_event->xfocus.mode == NotifyWhileGrabbed) {
+            if (window->keyboard_grab_manager->keyboard_grabbed) {
+                window->keyboard_grab_manager->ungrab_keyboard();
+                window->release_all_keys(); // Or keys held at switch time stay down on the remote
+            }
+        } else if (x11_event->type == FocusIn &&
+                   (x11_event->xfocus.mode == NotifyNormal || x11_event->xfocus.mode == NotifyWhileGrabbed) &&
+                   x11_event->xfocus.detail != NotifyPointer &&
+                   x11_event->xfocus.detail != NotifyPointerRoot) {
+            // A FocusIn on our window does not by itself mean we hold the focus
+            // now, so the condition is re-derived rather than inferred
+            if (window->should_grab_keyboard()) {
+                window->keyboard_grab_manager->grab_keyboard();
+            }
         }
     }
+#endif
+
+    if (window->mouse_manager) {
+        auto parsed_event = window->mouse_manager->parse_event(event);
+        if (parsed_event.has_value()) {
+            json message = {
+                {"type", "mousemove"},
+                {"x", (int) std::round(parsed_event->x)},
+                {"y", (int) std::round(parsed_event->y)},
+            };
+            if (try_send(window->unordered_channel, message.dump())) {
+                return 1;
+            }
+        }
+    }
+
     return 0;
 }
 
@@ -155,7 +231,8 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
                 resp,
                 req_json.dump(),
                 {{"Content-Type", "application/json"}},
-                client_config); !fetch_res) {
+                client_config);
+            !fetch_res) {
             if (*cancel_token_copy) return;
             awake([cancel_token_copy, this, err = fetch_res.error().message()]() {
                 if (*cancel_token_copy) return;
@@ -230,9 +307,11 @@ void VideoWindow::show() {
     if (!conn_info.view_only) {
         if (!conn_info.client_side_mouse) {
             mouse_manager = std::make_unique<RawMouseManager>(this);
-            Fl::add_system_handler(&VideoWindow::system_event_handler, this);
         }
         keyboard_grab_manager = std::make_unique<KeyboardGrabManager>(top_window());
+        // Serves the focus handling, so it is needed in every non-view-only mode
+        Fl::add_system_handler(&VideoWindow::system_event_handler, this);
+        Fl::add_timeout(1.0, grab_reconcile_callback, this);
     }
 
     video_pipeline = gst_pipeline_new(nullptr);
@@ -425,8 +504,10 @@ void VideoWindow::hide() {
     }
 
     if (!conn_info.view_only) {
+        // Removed first: both touch the managers reset below
+        Fl::remove_timeout(grab_reconcile_callback, this);
+        Fl::remove_system_handler(&VideoWindow::system_event_handler);
         if (!conn_info.client_side_mouse) {
-            Fl::remove_system_handler(&VideoWindow::system_event_handler);
             mouse_manager.reset();
         }
         keyboard_grab_manager.reset();
@@ -645,7 +726,8 @@ int VideoWindow::handle(int event) {
 
         case FL_ENTER:
             if (!conn_info.view_only) {
-                if (Fl::focus()) {
+                pointer_inside = true;
+                if (should_grab_keyboard()) {
                     keyboard_grab_manager->grab_keyboard();
                 }
                 return 1;
@@ -654,6 +736,10 @@ int VideoWindow::handle(int event) {
 
         case FL_LEAVE:
             if (!conn_info.view_only) {
+                pointer_inside = false;
+                // No release_all_keys() here: leaving the window drops the grab but
+                // keeps focus, so keys still reach the remote and releasing them
+                // would break holding one while the pointer drifts off
                 keyboard_grab_manager->ungrab_keyboard();
                 return 1;
             }
