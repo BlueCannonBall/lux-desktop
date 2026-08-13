@@ -2,6 +2,7 @@
 #include <FL/Fl_Window.H>
 #include <FL/x.H>
 #include <assert.h>
+#include <iostream>
 #ifdef _WIN32
 // clang-format off
     #include <windows.h>
@@ -10,7 +11,6 @@
 #else
     #include <X11/Xlib.h>
     #include <X11/extensions/XInput2.h>
-    #include <iostream>
 #endif
 
 #ifdef _WIN32
@@ -33,7 +33,11 @@ RawMouseManager::RawMouseManager(Fl_Window* window):
     device.usUsage = HID_USAGE_GENERIC_MOUSE;
     device.dwFlags = RIDEV_INPUTSINK;
     device.hwndTarget = platform->window;
-    assert(RegisterRawInputDevices(&device, 1, sizeof device));
+    // Not inside assert(): NDEBUG would drop the registration itself, and raw
+    // mouse input would silently stop working in exactly the builds we ship
+    if (!RegisterRawInputDevices(&device, 1, sizeof device)) {
+        std::cerr << "Error: Failed to register raw mouse input" << std::endl;
+    }
 }
 
 RawMouseManager::~RawMouseManager() {
@@ -44,7 +48,9 @@ RawMouseManager::~RawMouseManager() {
     device.usUsage = HID_USAGE_GENERIC_MOUSE;
     device.dwFlags = RIDEV_REMOVE;
     device.hwndTarget = nullptr;
-    assert(RegisterRawInputDevices(&device, 1, sizeof device));
+    if (!RegisterRawInputDevices(&device, 1, sizeof device)) {
+        std::cerr << "Error: Failed to unregister raw mouse input" << std::endl;
+    }
 }
 
 void RawMouseManager::lock_mouse() {
@@ -188,7 +194,7 @@ private:
 
     Window window;
     Display* display;
-    int xi_opcode;
+    int xi_opcode = -1; // Never matches a real event, so a failed query just disables raw input
 
 public:
     Platform(Fl_Window* window, Display* display = fl_x11_display()):
@@ -196,7 +202,10 @@ public:
         display(display) {
         int event;
         int error;
-        assert(XQueryExtension(display, "XInputExtension", &xi_opcode, &event, &error) == True);
+        // Not inside assert(): NDEBUG would drop the query and leave xi_opcode unset
+        if (XQueryExtension(display, "XInputExtension", &xi_opcode, &event, &error) != True) {
+            std::cerr << "Error: XInput extension is unavailable, raw mouse input is disabled" << std::endl;
+        }
     }
 };
 

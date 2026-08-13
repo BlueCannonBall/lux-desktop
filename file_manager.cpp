@@ -2,7 +2,7 @@
 #include "Polyweb/binary.hpp"
 #include "json.hpp"
 #include "util.hpp"
-#include <FL/Fl_File_Chooser.H>
+#include <FL/Fl_Native_File_Chooser.H>
 #include <FL/fl_callback_macros.H>
 #include <exception>
 #include <inttypes.h>
@@ -242,10 +242,14 @@ void FileManager::on_string_message(rtc::string message) {
                 }
             }
         } else if (message_json["type"] == "canceltransfer") {
-            if (message_json["id"] < transfer_id) {
-                incoming_transfers.erase(message_json["id"]);
-                outgoing_transfers.erase(message_json["id"]);
-                awake([id = message_json["id"].get<uint32_t>()]() {
+            // Report only transfers that were still running. An id below transfer_id
+            // just means we allocated it at some point, so testing that alone claims
+            // a transfer failed when a stray or duplicate cancel arrives for one that
+            // already finished. Both erases run; ids are unique across the two maps
+            uint32_t id = message_json["id"].get<uint32_t>();
+            size_t erased = incoming_transfers.erase(id) + outgoing_transfers.erase(id);
+            if (erased) {
+                awake([id]() {
                     fl_alert("File transfer #%" PRIu32 " has been cancelled.", id);
                 });
             }
@@ -296,14 +300,24 @@ FileManager::~FileManager() {
 }
 
 void FileManager::upload() {
-    // fl_file_chooser() pumps the event loop, so the connection can be torn down
-    // and this FileManager destroyed before it returns. Nothing below the chooser
-    // may touch a member until this has been checked
+    // The chooser pumps the event loop (the GTK backend runs Fl::check() while its
+    // own dialog is up), so the connection can be torn down and this FileManager
+    // destroyed before it returns. Nothing below may touch a member until checked
     auto alive_copy = alive;
-    const char* filename = fl_file_chooser("Choose File", nullptr, nullptr, 0);
-    if (!filename || !*alive_copy) {
+
+    Fl_Native_File_Chooser chooser(Fl_Native_File_Chooser::BROWSE_FILE);
+    chooser.title("Choose File");
+    int result = chooser.show();
+    if (!*alive_copy) {
         return;
     }
+    if (result == -1) {
+        fl_alert("Error: Failed to open file chooser: %s", chooser.errmsg());
+        return;
+    } else if (result != 0 || !chooser.filename() || !*chooser.filename()) {
+        return; // Cancelled
+    }
+    const char* filename = chooser.filename();
 
     auto transfer = std::make_shared<OutgoingTransfer>();
     transfer->file.open((transfer->path = filename), std::ios::binary | std::ios::ate);
@@ -338,10 +352,21 @@ void FileManager::upload() {
 
 void FileManager::download() {
     auto alive_copy = alive;
-    const char* filename = fl_file_chooser("Save File", nullptr, nullptr, 0);
-    if (!filename || !*alive_copy) {
+
+    Fl_Native_File_Chooser chooser(Fl_Native_File_Chooser::BROWSE_SAVE_FILE);
+    chooser.title("Save File");
+    chooser.options(Fl_Native_File_Chooser::SAVEAS_CONFIRM | Fl_Native_File_Chooser::NEW_FOLDER);
+    int result = chooser.show();
+    if (!*alive_copy) {
         return;
     }
+    if (result == -1) {
+        fl_alert("Error: Failed to open file chooser: %s", chooser.errmsg());
+        return;
+    } else if (result != 0 || !chooser.filename() || !*chooser.filename()) {
+        return; // Cancelled
+    }
+    const char* filename = chooser.filename();
 
     auto transfer = std::make_shared<IncomingTransfer>();
     transfer->file.open((transfer->path = filename), std::ios::binary);

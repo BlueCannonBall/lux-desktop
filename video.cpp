@@ -10,6 +10,7 @@
 #include <FL/fl_draw.H>
 #include <FL/x.H>
 #include <cmath>
+#include <gst/app/gstappsrc.h> // For GST_APP_LEAKY_TYPE_*; header-only, no extra linkage
 #include <gst/video/videooverlay.h>
 #include <inttypes.h>
 
@@ -239,7 +240,11 @@ void VideoWindow::show() {
         GstElement* appsrc = gst_element_factory_make("appsrc", nullptr);
         {
             GstCaps* caps = gst_caps_new_simple("application/x-rtp", "media", G_TYPE_STRING, "video", "encoding-name", G_TYPE_STRING, "H264", "clock-rate", G_TYPE_INT, 90000, nullptr);
-            g_object_set(appsrc, "caps", caps, "emit-signals", FALSE, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, nullptr);
+            // leaky-type is what bounds the queue: with the default (none) appsrc
+            // accepts everything even past max-bytes, so a decode stall becomes
+            // latency that never recovers. min-latency=0 shaves the tail slightly.
+            // Casts matter, g_object_set is varargs and these are 64-bit properties
+            g_object_set(appsrc, "caps", caps, "emit-signals", FALSE, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, "min-latency", (gint64) 0, "leaky-type", GST_APP_LEAKY_TYPE_DOWNSTREAM, nullptr);
             gst_caps_unref(caps);
         }
         video_track->onMessage([appsrc](rtc::binary message) {
@@ -267,7 +272,10 @@ void VideoWindow::show() {
         GstElement* h264dec = gst_element_factory_make("d3d11h264dec", nullptr);
 #else
         GstElement* h264dec = gst_element_factory_make("avdec_h264", nullptr);
-        g_object_set(h264dec, "direct-rendering", FALSE, nullptr);
+        // thread-type is pinned rather than left on "auto": auto resolves to slice
+        // threading today, but if libav ever picks frame threading it buffers ~19
+        // frames, which measured as 320ms of latency against 5ms for slice
+        g_object_set(h264dec, "direct-rendering", FALSE, "thread-type", 2 /* slice */, nullptr);
 #endif
         {
             glib::Object<GstPad> pad = gst_element_get_static_pad(h264dec, "src");
@@ -298,7 +306,12 @@ void VideoWindow::show() {
 #else
         GstElement* videosink = gst_element_factory_make("xvimagesink", nullptr);
 #endif
-        g_object_set(videosink, "max-lateness", 0, nullptr);
+        // GstBaseSink pads its reported latency by processing-deadline (15ms on
+        // GstVideoSink, 20ms otherwise) and holds every frame that long. Zeroing it
+        // measured 20.4ms -> 5.2ms of render latency, independent of framerate.
+        // max-lateness is deliberately left at its default: it has no latency effect
+        // (measured), and pairing 0 slack with drop-anything-late invites frame loss
+        g_object_set(videosink, "processing-deadline", (guint64) 0, nullptr);
 
         gst_bin_add_many(GST_BIN(video_pipeline.get()),
             appsrc,
@@ -340,7 +353,7 @@ void VideoWindow::show() {
         GstElement* appsrc = gst_element_factory_make("appsrc", nullptr);
         {
             GstCaps* caps = gst_caps_new_simple("application/x-rtp", "media", G_TYPE_STRING, "audio", "encoding-name", G_TYPE_STRING, "OPUS", "clock-rate", G_TYPE_INT, 48000, "payload", G_TYPE_INT, 97, nullptr);
-            g_object_set(appsrc, "caps", caps, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, nullptr);
+            g_object_set(appsrc, "caps", caps, "format", GST_FORMAT_TIME, "is-live", TRUE, "do-timestamp", TRUE, "min-latency", (gint64) 0, "leaky-type", GST_APP_LEAKY_TYPE_DOWNSTREAM, nullptr);
             gst_caps_unref(caps);
         }
         audio_track->onMessage([appsrc](rtc::binary message) {
@@ -687,6 +700,15 @@ void VideoWindow::request_keyframe() {
         video_track->requestKeyframe();
     } catch (const std::exception& e) {
         std::cerr << "Failed to request keyframe: " << e.what() << std::endl;
+    }
+}
+
+void VideoWindow::release_input_grabs() {
+    if (keyboard_grab_manager) {
+        keyboard_grab_manager->ungrab_keyboard();
+    }
+    if (mouse_manager) {
+        mouse_manager->unlock_mouse();
     }
 }
 

@@ -75,4 +75,10 @@ public:
     void set_bitrate(unsigned int bitrate);
     void request_keyframe();
     void release_all_keys();
+
+    // Drops the X keyboard/pointer grabs so another window can take input. A
+    // native file dialog is a separate toplevel, and an XGrabKeyboard held here
+    // starves it of key events, leaving it visible but completely inert. The
+    // grabs come back on the next FL_ENTER once the dialog is gone
+    void release_input_grabs();
 };

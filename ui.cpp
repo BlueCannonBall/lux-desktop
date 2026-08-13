@@ -467,6 +467,10 @@ void MainWindow::handle_upload() {
     if (video_window) {
         if (video_window->file_manager) {
             if (video_window->file_manager->ready()) {
+                // The native chooser is a separate toplevel window; our input
+                // grabs would leave it inert. Nothing below touches video_window,
+                // which the chooser's nested event loop may destroy
+                video_window->release_input_grabs();
                 video_window->file_manager->upload();
             } else {
                 fl_alert("Error: There is no active connection");
@@ -483,6 +487,7 @@ void MainWindow::handle_download() {
     if (video_window) {
         if (video_window->file_manager) {
             if (video_window->file_manager->ready()) {
+                video_window->release_input_grabs();
                 video_window->file_manager->download();
             } else {
                 fl_alert("Error: There is no active connection");

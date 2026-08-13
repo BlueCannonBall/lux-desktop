@@ -34,7 +34,9 @@ protected:
 struct IncomingTransfer {
     std::ofstream file;
     std::string path;
-    uint64_t size;
+    // Not known until `transferready` arrives, which is only ordered ahead of the
+    // first chunk because both travel the same reliable ordered channel
+    uint64_t size = 0;
     std::atomic<uint64_t> received = 0;
     std::atomic<ProgressWindow*> progress_window = nullptr;
     std::chrono::steady_clock::time_point last_progress_update = std::chrono::steady_clock::now();
@@ -51,7 +53,7 @@ struct IncomingTransfer {
 struct OutgoingTransfer {
     std::ifstream file;
     std::string path;
-    uint64_t size;
+    uint64_t size = 0; // Set by upload() before the transfer is registered
     std::atomic<uint64_t> sent = 0;
     std::atomic<bool> started = false; // Set once the peer has acknowledged the transfer
     std::atomic<ProgressWindow*> progress_window = nullptr;
