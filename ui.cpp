@@ -210,9 +210,14 @@ MainWindow::MainWindow():
         window->handle_download();
     },
         this);
-    menu_bar->add("File/Quit", 0, [](Fl_Widget*, void*) {
-        exit(EXIT_SUCCESS);
-    });
+    // Hiding the window rather than exiting runs the same teardown as closing it
+    // from the window manager, which cancels transfers and closes the connection.
+    // exit() would leave all of that undone while the worker threads kept running
+    menu_bar->add("File/Quit", 0, [](Fl_Widget*, void* data) {
+        auto window = (MainWindow*) data;
+        window->hide();
+    },
+        this);
     menu_bar->add("Edit/Release All Keys", 0, [](Fl_Widget*, void* data) {
         auto window = (MainWindow*) data;
         if (window->video_window) {
@@ -510,7 +515,11 @@ void MainWindow::handle_set_bitrate() {
         ok_button->selection_color(fl_rgb_color(0, 86, 179));
         ok_button->labelcolor(FL_WHITE);
         FL_INLINE_CALLBACK_3(ok_button, MainWindow*, main_window, this, Fl_Double_Window*, window, window, Fl_Spinner*, bitrate_spinner, bitrate_spinner, {
-            main_window->video_window->set_bitrate(bitrate_spinner->value());
+            // The connection can be torn down by check_ice_state while this
+            // dialog sits open, so it must be re-checked rather than assumed
+            if (main_window->video_window) {
+                main_window->video_window->set_bitrate(bitrate_spinner->value());
+            }
             window->hide();
             Fl::delete_widget(window);
         });
@@ -558,6 +567,9 @@ void MainWindow::handle_toggle_fullscreen() {
 
 void MainWindow::check_ice_state(void* data) {
     auto window = (MainWindow*) data;
+    if (!window->video_window) {
+        return; // handle_select_conn() got there first
+    }
 
     if (window->video_window->has_connection_error()) {
         window->handle_select_conn();

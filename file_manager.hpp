@@ -29,18 +29,20 @@ protected:
     Fl_Progress* progress;
 };
 
+// progress_window is written on the main thread and read on libdatachannel's
+// threads, so it has to be atomic
 struct IncomingTransfer {
     std::ofstream file;
     std::string path;
     uint64_t size;
     std::atomic<uint64_t> received = 0;
-    ProgressWindow* progress_window = nullptr;
+    std::atomic<ProgressWindow*> progress_window = nullptr;
     std::chrono::steady_clock::time_point last_progress_update = std::chrono::steady_clock::now();
 
     ~IncomingTransfer() {
-        if (progress_window) {
-            awake([progress_window = progress_window]() {
-                Fl::delete_widget(progress_window);
+        if (auto window = progress_window.load()) {
+            awake([window]() {
+                Fl::delete_widget(window);
             });
         }
     }
@@ -51,13 +53,14 @@ struct OutgoingTransfer {
     std::string path;
     uint64_t size;
     std::atomic<uint64_t> sent = 0;
-    ProgressWindow* progress_window = nullptr;
+    std::atomic<bool> started = false; // Set once the peer has acknowledged the transfer
+    std::atomic<ProgressWindow*> progress_window = nullptr;
     std::chrono::steady_clock::time_point last_progress_update = std::chrono::steady_clock::now();
 
     ~OutgoingTransfer() {
-        if (progress_window) {
-            awake([progress_window = progress_window]() {
-                Fl::delete_widget(progress_window);
+        if (auto window = progress_window.load()) {
+            awake([window]() {
+                Fl::delete_widget(window);
             });
         }
     }
@@ -66,6 +69,11 @@ struct OutgoingTransfer {
 class FileManager {
 protected:
     std::shared_ptr<rtc::DataChannel> channel;
+
+    // upload() and download() run a modal file chooser, which pumps the event
+    // loop, which can destroy this FileManager along with the connection. They
+    // hold a copy of this flag across the chooser to detect that
+    std::shared_ptr<bool> alive = std::make_shared<bool>(true);
 
     std::mutex mutex;
     uint64_t chunk_size;

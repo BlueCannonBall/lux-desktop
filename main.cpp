@@ -5,6 +5,7 @@
 #include <FL/Fl.H>
 #include <FL/Fl_PNG_Image.H>
 #include <FL/Fl_Window.H>
+#include <cstdlib>
 #include <gst/gst.h>
 #include <rtc/rtc.hpp>
 #ifdef _WIN32
@@ -46,5 +47,11 @@ int main(int argc, char* argv[]) {
     Fl::flush();
     set_window_dark_mode(fl_xid(&window));
 #endif
-    return Fl::run();
+    int status = Fl::run();
+
+    // Everything that needs an orderly shutdown was torn down by MainWindow::hide().
+    // A detached login thread may still be inside a fetch, though, and running the
+    // static destructors underneath it (Polyweb's shared TLS context, the thread
+    // pool, GStreamer) would be a use-after-free, so leave the rest to the OS
+    std::_Exit(status);
 }

@@ -37,21 +37,19 @@ namespace glib {
             *this = std::move(object);
         }
 
-        Object& operator=(const Object& object) {
-            if (this != &object && this->object != object.object) {
-                if (this->object) g_object_unref(this->object);
-                if (object.object) g_object_ref(this->object = object.object);
+        Object& operator=(const Object& other) {
+            if (this != &other) {
+                if (other.object) g_object_ref(other.object); // Ref first, in case both hold the same object
+                if (object) g_object_unref(object);
+                object = other.object;
             }
             return *this;
         }
 
-        Object& operator=(Object&& object) {
-            if (this != &object) {
-                if (this->object != object.object) {
-                    if (this->object) g_object_unref(this->object);
-                    this->object = object.object;
-                }
-                object.object = nullptr;
+        Object& operator=(Object&& other) {
+            if (this != &other) {
+                if (object) g_object_unref(object);
+                object = std::exchange(other.object, nullptr);
             }
             return *this;
         }
@@ -85,16 +83,19 @@ namespace glib {
             return object;
         }
 
-        operator bool() const {
+        // Explicit, so that comparing two objects can never silently degrade into
+        // comparing whether both are non-null
+        explicit operator bool() const {
             return object;
         }
 
-        bool operator==(const T& other_object) const {
-            return object == other_object.object;
+        // != is synthesized from == by the compiler
+        bool operator==(const Object& other) const {
+            return object == other.object;
         }
 
-        bool operator!=(const T& other_object) const {
-            return object != other_object.object;
+        bool operator==(const T* other_object) const {
+            return object == other_object;
         }
 
         friend std::ostream& operator<<(std::ostream& os, const Object& object) {

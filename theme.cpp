@@ -4,7 +4,6 @@
 #ifdef _WIN32
     #include <dwmapi.h>
 #else
-    #include "glib.hpp"
     #include <gio/gio.h>
     #include <string.h>
 #endif
@@ -25,10 +24,27 @@ bool is_dark_mode() {
     }
     return false;
 #else
-    glib::Object<GSettings> settings = g_settings_new("org.gnome.desktop.interface");
-    char* theme = g_settings_get_string(settings.get(), "color-scheme");
+    // g_settings_new() and g_settings_get_string() abort the process rather than
+    // fail when the schema or key is missing, so neither may be called unguarded
+    GSettingsSchemaSource* source = g_settings_schema_source_get_default();
+    if (!source) {
+        return false;
+    }
+    GSettingsSchema* schema = g_settings_schema_source_lookup(source, "org.gnome.desktop.interface", TRUE);
+    if (!schema) {
+        return false;
+    }
+    bool has_key = g_settings_schema_has_key(schema, "color-scheme");
+    g_settings_schema_unref(schema);
+    if (!has_key) {
+        return false;
+    }
+
+    GSettings* settings = g_settings_new("org.gnome.desktop.interface");
+    char* theme = g_settings_get_string(settings, "color-scheme");
     bool ret = strcmp(theme, "default") && strcmp(theme, "prefer-light");
     g_free(theme);
+    g_object_unref(settings);
     return ret;
 #endif
 }
@@ -119,8 +135,8 @@ void configure_fltk_colors() {
         Fl::foreground(32, 32, 32);
         Fl::background(235, 235, 235);
         Fl::background2(255, 255, 255);
-        fl_contrast_level(50);
     }
+    fl_contrast_level(50);
     Fl::set_color(FL_SELECTION_COLOR, 0, 120, 215);
 }
 

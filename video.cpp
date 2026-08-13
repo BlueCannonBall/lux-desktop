@@ -18,14 +18,15 @@ using nlohmann::json;
 int VideoWindow::system_event_handler(void* event, void* data) {
     auto window = (VideoWindow*) data;
     auto parsed_event = window->mouse_manager->parse_event(event);
-    if (parsed_event.has_value() && window->unordered_channel->isOpen()) {
+    if (parsed_event.has_value()) {
         json message = {
             {"type", "mousemove"},
             {"x", (int) std::round(parsed_event->x)},
             {"y", (int) std::round(parsed_event->y)},
         };
-        window->unordered_channel->send(message.dump());
-        return 1;
+        if (try_send(window->unordered_channel, message.dump())) {
+            return 1;
+        }
     }
     return 0;
 }
@@ -123,17 +124,37 @@ VideoWindow::VideoWindow(int x, int y, int width, int height, ConnectionInfo con
             {"offer", pw::base64_encode(offer.data(), offer.size())},
         };
 
-        pw::HTTPResponse resp;
+        pw::ClientConfig client_config = {
+            .tcp = {
+                .send_timeout = std::chrono::seconds(5),
+                .recv_timeout = std::chrono::seconds(5),
+            },
+        };
+
+        // Polyweb's default context verifies peers, so one of our own is only needed when
+        // verification is off. It must outlive the fetch that borrows it
+        pn::TLSContext unverified_context;
+        if (!conn_info_copy.verify_certs) {
+            // Not pn::Status, because X11 defines Status as a macro
+            if (auto init_res = unverified_context.init_client(SSL_VERIFY_NONE); !init_res) {
+                if (*cancel_token_copy) return;
+                awake([cancel_token_copy, this, err = init_res.error().message()]() {
+                    if (*cancel_token_copy) return;
+                    connection_error = true;
+                    fl_alert("Failed to connect: %s", err.c_str());
+                });
+                return;
+            }
+            client_config.tls_context = &unverified_context;
+        }
+
+        pw::Response resp;
         if (auto fetch_res = pw::fetch("POST",
                 "https://" + conn_info_copy.address + "/offer",
                 resp,
                 req_json.dump(),
                 {{"Content-Type", "application/json"}},
-                {
-                    .send_timeout = std::chrono::seconds(5),
-                    .recv_timeout = std::chrono::seconds(5),
-                    .verify_mode = conn_info_copy.verify_certs ? SSL_VERIFY_PEER : SSL_VERIFY_NONE,
-                }); !fetch_res) {
+                client_config); !fetch_res) {
             if (*cancel_token_copy) return;
             awake([cancel_token_copy, this, err = fetch_res.error().message()]() {
                 if (*cancel_token_copy) return;
@@ -398,12 +419,19 @@ void VideoWindow::hide() {
         keyboard_grab_manager.reset();
     }
     file_manager.reset();
-    if (ordered_channel->isOpen()) {
+    {
         json message = {
             {"type", "disconnect"},
         };
-        ordered_channel->send(message.dump());
+        try_send(ordered_channel, message.dump());
     }
+
+    // The track callbacks below push into the GStreamer pipelines this function
+    // is about to destroy, and PeerConnection::close() closes tracks
+    // asynchronously, so it cannot be relied on to detach them in time.
+    // resetCallbacks() waits for any callback already in flight to return
+    if (video_track) video_track->resetCallbacks();
+    if (audio_track) audio_track->resetCallbacks();
     conn->close();
     connected = false;
 
@@ -503,25 +531,27 @@ int VideoWindow::handle(int event) {
                 if (!conn_info.client_side_mouse && !mouse_manager->mouse_locked) {
                     mouse_manager->lock_mouse();
                     return 1;
-                } else if (ordered_channel->isOpen()) {
+                } else {
                     json message = {
                         {"type", "mousedown"},
                         {"button", Fl::event_button() - 1},
                     };
-                    ordered_channel->send(message.dump());
-                    return 1;
+                    if (try_send(ordered_channel, message.dump())) {
+                        return 1;
+                    }
                 }
             }
             break;
 
         case FL_RELEASE:
-            if (!conn_info.view_only && ordered_channel->isOpen()) {
+            if (!conn_info.view_only) {
                 json message = {
                     {"type", "mouseup"},
                     {"button", Fl::event_button() - 1},
                 };
-                ordered_channel->send(message.dump());
-                return 1;
+                if (try_send(ordered_channel, message.dump())) {
+                    return 1;
+                }
             }
             break;
 
@@ -529,17 +559,16 @@ int VideoWindow::handle(int event) {
         case FL_DRAG:
             if (!conn_info.view_only) {
                 if (conn_info.client_side_mouse) {
-                    if (ordered_channel->isOpen()) {
-                        int x;
-                        int y;
-                        position_in_video(Fl::event_x(), Fl::event_y(), x, y);
+                    int x;
+                    int y;
+                    position_in_video(Fl::event_x(), Fl::event_y(), x, y);
 
-                        json message = {
-                            {"type", "mousemoveabs"},
-                            {"x", x},
-                            {"y", y},
-                        };
-                        ordered_channel->send(message.dump());
+                    json message = {
+                        {"type", "mousemoveabs"},
+                        {"x", x},
+                        {"y", y},
+                    };
+                    if (try_send(ordered_channel, message.dump())) {
                         return 1;
                     }
                 } else {
@@ -549,14 +578,15 @@ int VideoWindow::handle(int event) {
             break;
 
         case FL_MOUSEWHEEL:
-            if (!conn_info.view_only && unordered_channel->isOpen()) {
+            if (!conn_info.view_only) {
                 json message = {
                     {"type", "wheel"},
                     {"x", (int) std::round(Fl::event_dx() * 120.0)},
                     {"y", (int) std::round(Fl::event_dy() * 120.0)},
                 };
-                unordered_channel->send(message.dump());
-                return 1;
+                if (try_send(unordered_channel, message.dump())) {
+                    return 1;
+                }
             }
             break;
 
@@ -569,25 +599,27 @@ int VideoWindow::handle(int event) {
                         mouse_manager->lock_mouse();
                     }
                     return 1;
-                } else if (!is_key_global_shortcut(Fl::event_key()) && ordered_channel->isOpen()) {
+                } else if (!is_key_global_shortcut(Fl::event_key())) {
                     json message = {
                         {"type", "keyup"},
                         {"key", fltk_to_browser_key(Fl::event_key())},
                     };
-                    ordered_channel->send(message.dump());
-                    return 1;
+                    if (try_send(ordered_channel, message.dump())) {
+                        return 1;
+                    }
                 }
             }
             break;
 
         case FL_KEYDOWN:
-            if (!conn_info.view_only && !is_key_global_shortcut(Fl::event_key()) && ordered_channel->isOpen()) {
+            if (!conn_info.view_only && !is_key_global_shortcut(Fl::event_key())) {
                 json message = {
                     {"type", "keydown"},
                     {"key", fltk_to_browser_key(Fl::event_key())},
                 };
-                ordered_channel->send(message.dump());
-                return 1;
+                if (try_send(ordered_channel, message.dump())) {
+                    return 1;
+                }
             }
             break;
 
@@ -639,12 +671,23 @@ unsigned int VideoWindow::get_bitrate() const {
     return conn_info.bitrate;
 }
 
+// rtc::Track throws once its transport is gone, which happens as soon as the
+// connection drops, so neither of these may be called unguarded
 void VideoWindow::set_bitrate(unsigned int bitrate) {
-    video_track->requestBitrate((conn_info.bitrate = bitrate) * 1000);
+    conn_info.bitrate = bitrate;
+    try {
+        video_track->requestBitrate(bitrate * 1000);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to request bitrate: " << e.what() << std::endl;
+    }
 }
 
 void VideoWindow::request_keyframe() {
-    video_track->requestKeyframe();
+    try {
+        video_track->requestKeyframe();
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to request keyframe: " << e.what() << std::endl;
+    }
 }
 
 void VideoWindow::release_all_keys() {
@@ -652,6 +695,6 @@ void VideoWindow::release_all_keys() {
         json message = {
             {"type", "releaseall"},
         };
-        ordered_channel->send(message.dump());
+        try_send(ordered_channel, message.dump());
     }
 }

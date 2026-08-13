@@ -1,5 +1,5 @@
 #include "file_manager.hpp"
-#include "Polyweb/polyweb.hpp"
+#include "Polyweb/binary.hpp"
 #include "json.hpp"
 #include "util.hpp"
 #include <FL/Fl_File_Chooser.H>
@@ -56,9 +56,9 @@ void FileManager::on_buffered_amount_low() {
         buffered_amount_low_running = true;
 
         std::lock_guard<std::mutex> lock(mutex);
-        while (channel->bufferedAmount() <= 512 * 1024 && !outgoing_transfers.empty()) {
+        while (channel->isOpen() && channel->bufferedAmount() <= 512 * 1024 && !outgoing_transfers.empty()) {
             for (auto transfer_it = outgoing_transfers.begin(); transfer_it != outgoing_transfers.end();) {
-                if (transfer_it->second->progress_window) {
+                if (transfer_it->second->started) {
                     rtc::binary message(chunk_size + 4);
                     if (transfer_it->second->file.read((char*) message.data() + 4, chunk_size).bad() && !transfer_it->second->file.eof()) {
                         uint32_t id = transfer_it->first;
@@ -75,13 +75,20 @@ void FileManager::on_buffered_amount_low() {
 #else
                     pw::reverse_memcpy(message.data(), &transfer_it->first, 4);
 #endif
-                    channel->send(std::move(message));
+                    if (!try_send(channel, std::move(message))) {
+                        // The connection is going away, so there is nothing to
+                        // report to the peer and no point alerting per transfer
+                        transfer_it = outgoing_transfers.erase(transfer_it);
+                        continue;
+                    }
                     transfer_it->second->sent += transfer_it->second->file.gcount();
 
                     if (auto now = std::chrono::steady_clock::now(); now - transfer_it->second->last_progress_update >= PROGRESS_UPDATE_INTERVAL) {
                         awake([weak_transfer = std::weak_ptr<OutgoingTransfer>(transfer_it->second)]() {
                             if (auto transfer = weak_transfer.lock()) {
-                                transfer->progress_window->value(transfer->sent);
+                                if (auto window = transfer->progress_window.load()) {
+                                    window->value(transfer->sent);
+                                }
                             }
                         });
                         transfer_it->second->last_progress_update = now;
@@ -126,7 +133,9 @@ void FileManager::on_binary_message(rtc::binary message) {
                 if (auto now = std::chrono::steady_clock::now(); now - transfer_it->second->last_progress_update >= PROGRESS_UPDATE_INTERVAL) {
                     awake([weak_transfer = std::weak_ptr<IncomingTransfer>(transfer_it->second)]() {
                         if (auto transfer = weak_transfer.lock()) {
-                            transfer->progress_window->value(transfer->received);
+                            if (auto window = transfer->progress_window.load()) {
+                                window->value(transfer->received);
+                            }
                         }
                     });
                     transfer_it->second->last_progress_update = now;
@@ -149,41 +158,49 @@ void FileManager::on_string_message(rtc::string message) {
             if (message_json.contains("size")) {
                 if (auto transfer_it = incoming_transfers.find(message_json["id"]); transfer_it != incoming_transfers.end()) {
                     transfer_it->second->size = message_json["size"];
+                    // Must not block: this runs on a libdatachannel thread, inside
+                    // a callback that holds the channel's callback mutex and while
+                    // holding our own. Waiting for the main thread here deadlocks
+                    // against ~FileManager, which takes both from the other side
                     awake([this, id = transfer_it->first, weak_transfer = std::weak_ptr<IncomingTransfer>(transfer_it->second)]() {
                         if (auto transfer = weak_transfer.lock()) {
-                            transfer->progress_window = new ProgressWindow(transfer->path, transfer->received, transfer->size, [this, id]() {
+                            auto window = new ProgressWindow(transfer->path, transfer->received, transfer->size, [this, id]() {
                                 std::lock_guard<std::mutex> lock(mutex);
                                 incoming_transfers.erase(id);
                                 cancel_transfer(id);
                             });
-                            transfer->progress_window->show();
+                            transfer->progress_window = window;
+                            window->show();
 #ifdef _WIN32
                             Fl::flush();
-                            set_window_dark_mode(fl_xid(transfer->progress_window));
+                            set_window_dark_mode(fl_xid(window));
 #endif
                         }
-                    },
-                        true);
+                    });
                 }
             } else {
                 if (auto transfer_it = outgoing_transfers.find(message_json["id"]); transfer_it != outgoing_transfers.end()) {
+                    // Gates on_buffered_amount_low(), which used to wait on the
+                    // progress window existing. See the note above on why creating
+                    // that window must not block this thread
+                    transfer_it->second->started = true;
                     awake([this, id = transfer_it->first, weak_transfer = std::weak_ptr<OutgoingTransfer>(transfer_it->second)]() {
                         if (auto transfer = weak_transfer.lock()) {
-                            transfer->progress_window = new ProgressWindow(transfer->path, transfer->sent, transfer->size, [this, id]() {
+                            auto window = new ProgressWindow(transfer->path, transfer->sent, transfer->size, [this, id]() {
                                 std::lock_guard<std::mutex> lock(mutex);
                                 outgoing_transfers.erase(id);
                                 cancel_transfer(id);
                             });
-                            transfer->progress_window->show();
+                            transfer->progress_window = window;
+                            window->show();
 #ifdef _WIN32
                             Fl::flush();
-                            set_window_dark_mode(fl_xid(transfer->progress_window));
+                            set_window_dark_mode(fl_xid(window));
 #endif
                         }
-                    },
-                        true);
+                    });
 
-                    while (channel->bufferedAmount() <= 512 * 1024) {
+                    while (channel->isOpen() && channel->bufferedAmount() <= 512 * 1024) {
                         rtc::binary message(chunk_size + 4);
                         if (transfer_it->second->file.read((char*) message.data() + 4, chunk_size).bad() && !transfer_it->second->file.eof()) {
                             uint32_t id = transfer_it->first;
@@ -200,13 +217,18 @@ void FileManager::on_string_message(rtc::string message) {
 #else
                         pw::reverse_memcpy(message.data(), &transfer_it->first, 4);
 #endif
-                        channel->send(std::move(message));
+                        if (!try_send(channel, std::move(message))) {
+                            outgoing_transfers.erase(transfer_it);
+                            break;
+                        }
                         transfer_it->second->sent += transfer_it->second->file.gcount();
 
                         if (auto now = std::chrono::steady_clock::now(); now - transfer_it->second->last_progress_update >= PROGRESS_UPDATE_INTERVAL) {
                             awake([weak_transfer = std::weak_ptr<OutgoingTransfer>(transfer_it->second)]() {
                                 if (auto transfer = weak_transfer.lock()) {
-                                    transfer->progress_window->value(transfer->sent);
+                                    if (auto window = transfer->progress_window.load()) {
+                                        window->value(transfer->sent);
+                                    }
                                 }
                             });
                             transfer_it->second->last_progress_update = now;
@@ -234,35 +256,35 @@ void FileManager::on_string_message(rtc::string message) {
 }
 
 void FileManager::cancel_transfer(uint32_t id) {
-    if (channel->isOpen()) {
-        json message = {
-            {"type", "canceltransfer"},
-            {"id", id},
-        };
-        channel->send(message.dump());
-    }
+    json message = {
+        {"type", "canceltransfer"},
+        {"id", id},
+    };
+    try_send(channel, message.dump());
 }
 
 FileManager::~FileManager() {
+    *alive = false;
+
+    // Both of these wait for a callback already in flight to return, which is
+    // only safe because neither of them blocks on the main thread anymore
     channel->onMessage(nullptr, nullptr);
     channel->onBufferedAmountLow(nullptr);
 
     std::unique_lock<std::mutex> lock(mutex);
     for (auto& transfer : incoming_transfers) {
-        if (transfer.second->progress_window) {
-            awake([&transfer]() {
-                delete transfer.second->progress_window;
-                transfer.second->progress_window = nullptr;
+        if (auto window = transfer.second->progress_window.exchange(nullptr)) {
+            awake([window]() { // By value, so the capture cannot outlive this loop
+                delete window;
             },
                 true);
         }
         cancel_transfer(transfer.first);
     }
     for (auto& transfer : outgoing_transfers) {
-        if (transfer.second->progress_window) {
-            awake([&transfer]() {
-                delete transfer.second->progress_window;
-                transfer.second->progress_window = nullptr;
+        if (auto window = transfer.second->progress_window.exchange(nullptr)) {
+            awake([window]() {
+                delete window;
             },
                 true);
         }
@@ -274,49 +296,74 @@ FileManager::~FileManager() {
 }
 
 void FileManager::upload() {
-    if (const char* filename = fl_file_chooser("Choose File", nullptr, nullptr, 0); filename) {
-        auto transfer = std::make_shared<OutgoingTransfer>();
-        transfer->file.open((transfer->path = filename), std::ios::binary | std::ios::ate);
-        if (!transfer->file.is_open()) {
-            fl_alert("Error: Failed to open file");
-            return;
+    // fl_file_chooser() pumps the event loop, so the connection can be torn down
+    // and this FileManager destroyed before it returns. Nothing below the chooser
+    // may touch a member until this has been checked
+    auto alive_copy = alive;
+    const char* filename = fl_file_chooser("Choose File", nullptr, nullptr, 0);
+    if (!filename || !*alive_copy) {
+        return;
+    }
+
+    auto transfer = std::make_shared<OutgoingTransfer>();
+    transfer->file.open((transfer->path = filename), std::ios::binary | std::ios::ate);
+    if (!transfer->file.is_open()) {
+        fl_alert("Error: Failed to open file");
+        return;
+    }
+
+    uint64_t size = transfer->size = transfer->file.tellg();
+    transfer->file.seekg(0, std::ios::beg);
+
+    mutex.lock();
+    uint32_t id = transfer_id++;
+    outgoing_transfers[id] = std::move(transfer);
+    mutex.unlock();
+
+    json message = {
+        {"type", "requesttransfer"},
+        {"id", id},
+        {"size", size},
+    };
+    if (!try_send(channel, message.dump())) {
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            outgoing_transfers.erase(id);
         }
-
-        uint64_t size = transfer->size = transfer->file.tellg();
-        transfer->file.seekg(0, std::ios::beg);
-
-        mutex.lock();
-        uint32_t id = transfer_id++;
-        outgoing_transfers[id] = std::move(transfer);
-        mutex.unlock();
-
-        json message = {
-            {"type", "requesttransfer"},
-            {"id", id},
-            {"size", size},
-        };
-        channel->send(message.dump());
+        // Outside the lock: fl_alert() pumps the event loop, which can re-enter
+        // us through a progress window's cancel callback
+        fl_alert("Error: There is no active connection");
     }
 }
 
 void FileManager::download() {
-    if (const char* filename = fl_file_chooser("Save File", nullptr, nullptr, 0); filename) {
-        auto transfer = std::make_shared<IncomingTransfer>();
-        transfer->file.open((transfer->path = filename), std::ios::binary);
-        if (!transfer->file.is_open()) {
-            fl_alert("Error: Failed to open file");
-            return;
+    auto alive_copy = alive;
+    const char* filename = fl_file_chooser("Save File", nullptr, nullptr, 0);
+    if (!filename || !*alive_copy) {
+        return;
+    }
+
+    auto transfer = std::make_shared<IncomingTransfer>();
+    transfer->file.open((transfer->path = filename), std::ios::binary);
+    if (!transfer->file.is_open()) {
+        fl_alert("Error: Failed to open file");
+        return;
+    }
+
+    mutex.lock();
+    uint32_t id = transfer_id++;
+    incoming_transfers[id] = std::move(transfer);
+    mutex.unlock();
+
+    json message = {
+        {"type", "requesttransfer"},
+        {"id", id},
+    };
+    if (!try_send(channel, message.dump())) {
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            incoming_transfers.erase(id);
         }
-
-        mutex.lock();
-        uint32_t id = transfer_id++;
-        incoming_transfers[id] = std::move(transfer);
-        mutex.unlock();
-
-        json message = {
-            {"type", "requesttransfer"},
-            {"id", id},
-        };
-        channel->send(message.dump());
+        fl_alert("Error: There is no active connection");
     }
 }
