@@ -21,6 +21,17 @@ using nlohmann::json;
 // latency goes and hardware decode stays on
 #define LUX_USE_D3D11_DECODER 1
 
+// Whether the video sink waits on the clock before rendering each frame. At 0 it
+// renders on arrival, which takes the deadline arithmetic and, on Windows, the
+// system timer granularity out of the path entirely.
+//
+// Under test because per-element latency is near identical between Windows and
+// Linux (the decoder matches to two decimal places) while every tail is several
+// times fatter on Windows, which points at clock waiting rather than processing.
+// The cost of 0 is frame pacing: frames arriving in a burst are painted in a
+// burst rather than spread across their timestamps
+#define LUX_SINK_SYNC 0
+
 bool VideoWindow::should_grab_keyboard() const {
     if (conn_info.view_only || !pointer_inside) {
         return false;
@@ -415,6 +426,11 @@ void VideoWindow::show() {
         // max-lateness is deliberately left at its default: it has no latency effect
         // (measured), and pairing 0 slack with drop-anything-late invites frame loss
         g_object_set(videosink, "processing-deadline", (guint64) 0, nullptr);
+#if !LUX_SINK_SYNC
+        // Renders on arrival. processing-deadline above is then moot, but is left
+        // set so that flipping LUX_SINK_SYNC back on restores the tuned behaviour
+        g_object_set(videosink, "sync", FALSE, nullptr);
+#endif
 
         gst_bin_add_many(GST_BIN(video_pipeline.get()),
             appsrc,
