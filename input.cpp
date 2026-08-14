@@ -115,15 +115,29 @@ private:
     static HHOOK hook;
     static bool keyboard_grabbed;
 
-    static void post_key(WORD vkCode, UINT type, bool extended) {
+    static void post_key(WORD vkCode, UINT type, DWORD flags) {
         UINT scancode = MapVirtualKey(vkCode, MAPVK_VK_TO_VSC);
         LPARAM lParam = 1 | (scancode << 16); // Repeat count = 1
-        if (extended) lParam |= (1U << 24);
+        if (flags & LLKHF_EXTENDED) lParam |= (1U << 24);
+        // Bit 29 is the context code, which is how a window is told Alt was held.
+        // FLTK reads it directly to set FL_ALT, so a synthesised WM_SYSKEYDOWN
+        // without it arrives claiming the Alt combination was not one
+        if (flags & LLKHF_ALTDOWN) lParam |= (1U << 29);
         if (type == WM_KEYUP || type == WM_SYSKEYUP) {
             lParam |= (1U << 31); // Transition (up)
             lParam |= (1U << 30); // Previous state
         }
         PostMessage(window, type, vkCode, lParam);
+    }
+
+    // The hook is installed globally, so being grabbed is not enough to justify
+    // swallowing a key: the pointer can sit over our window while another
+    // application is focused, and eating the shell's shortcuts desktop-wide would
+    // be far worse now that more than four keys are taken. GA_ROOT so that a
+    // focused child window still counts as ours
+    static bool foreground_is_ours() {
+        HWND foreground = GetForegroundWindow();
+        return foreground && window && GetAncestor(foreground, GA_ROOT) == GetAncestor(window, GA_ROOT);
     }
 
     static LRESULT CALLBACK hook_cb(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -132,15 +146,36 @@ private:
             (wParam == WM_KEYDOWN ||
                 wParam == WM_SYSKEYDOWN ||
                 wParam == WM_KEYUP ||
-                wParam == WM_SYSKEYUP)) {
+                wParam == WM_SYSKEYUP) &&
+            foreground_is_ours()) {
             auto event_info = (KBDLLHOOKSTRUCT*) lParam;
             switch (event_info->vkCode) {
             case VK_LWIN:
             case VK_RWIN:
             case VK_TAB:
             case VK_SNAPSHOT:
-                post_key(event_info->vkCode, wParam, event_info->flags & LLKHF_EXTENDED);
+                post_key(event_info->vkCode, wParam, event_info->flags);
                 return 1;
+
+            case VK_MENU:
+            case VK_LMENU:
+            case VK_RMENU:
+                // Alt itself is left on the ordinary path, which already delivers
+                // it and is known to work. Swallowing it here would gain nothing
+                // and would risk the window never learning Alt is down
+                break;
+
+            default:
+                // Windows classifies a key as a system key exactly when Alt is
+                // held (and for F10), which is precisely where window manager
+                // bindings live: GlazeWM's Alt+1..9, Alt+Enter, Alt+arrows.
+                // Taking the whole class beats enumerating combinations we would
+                // otherwise keep discovering one complaint at a time
+                if (wParam == WM_SYSKEYDOWN || wParam == WM_SYSKEYUP) {
+                    post_key(event_info->vkCode, wParam, event_info->flags);
+                    return 1;
+                }
+                break;
             }
         }
         return CallNextHookEx(hook, nCode, wParam, lParam);
