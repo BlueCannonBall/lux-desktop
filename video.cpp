@@ -16,6 +16,13 @@
 
 using nlohmann::json;
 
+// Windows Direct3D 11 decoder, off while its latency is under investigation. DXVA
+// decoders can hold several frames for reordering, which is the Windows analogue of
+// libav's frame threading, and that measured as 320ms against 5ms for slice
+// threading on Linux. Only the decoder is switched: d3d11videosink stays, so the
+// rendering path is not a second variable
+#define LUX_USE_D3D11_DECODER 0
+
 bool VideoWindow::should_grab_keyboard() const {
     if (conn_info.view_only || !pointer_inside) {
         return false;
@@ -348,14 +355,27 @@ void VideoWindow::show() {
 #ifdef _WIN32
         GstElement* h264parse = gst_element_factory_make("h264parse", nullptr);
 
+    #if LUX_USE_D3D11_DECODER
         GstElement* h264dec = gst_element_factory_make("d3d11h264dec", nullptr);
+    #else
+        GstElement* h264dec = gst_element_factory_make("avdec_h264", nullptr);
+        if (h264dec) {
+            g_object_set(h264dec, "direct-rendering", FALSE, "thread-type", 2 /* slice */, nullptr);
+        }
+    #endif
 #else
         GstElement* h264dec = gst_element_factory_make("avdec_h264", nullptr);
         // thread-type is pinned rather than left on "auto": auto resolves to slice
         // threading today, but if libav ever picks frame threading it buffers ~19
         // frames, which measured as 320ms of latency against 5ms for slice
-        g_object_set(h264dec, "direct-rendering", FALSE, "thread-type", 2 /* slice */, nullptr);
+        if (h264dec) {
+            g_object_set(h264dec, "direct-rendering", FALSE, "thread-type", 2 /* slice */, nullptr);
+        }
 #endif
+        if (!h264dec) {
+            fl_alert("Failed to create the H.264 decoder");
+            return;
+        }
         {
             glib::Object<GstPad> pad = gst_element_get_static_pad(h264dec, "src");
             gst_pad_add_probe(pad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad* pad, GstPadProbeInfo* info, void* data) {
@@ -379,12 +399,18 @@ void VideoWindow::show() {
 
 #ifdef _WIN32
         GstElement* videosink = gst_element_factory_make("d3d11videosink", nullptr);
-        g_object_set(videosink, "enable-navigation-events", FALSE, nullptr);
+        if (videosink) {
+            g_object_set(videosink, "enable-navigation-events", FALSE, nullptr);
+        }
 #elif defined(__APPLE__)
         GstElement* videosink = gst_element_factory_make("osxvideosink", nullptr);
 #else
         GstElement* videosink = gst_element_factory_make("xvimagesink", nullptr);
 #endif
+        if (!videosink) {
+            fl_alert("Failed to create the video sink");
+            return;
+        }
         // GstBaseSink pads its reported latency by processing-deadline (15ms on
         // GstVideoSink, 20ms otherwise) and holds every frame that long. Zeroing it
         // measured 20.4ms -> 5.2ms of render latency, independent of framerate.
