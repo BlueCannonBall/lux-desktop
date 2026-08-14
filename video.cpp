@@ -16,12 +16,10 @@
 
 using nlohmann::json;
 
-// Windows Direct3D 11 decoder, off while its latency is under investigation. DXVA
-// decoders can hold several frames for reordering, which is the Windows analogue of
-// libav's frame threading, and that measured as 320ms against 5ms for slice
-// threading on Linux. Only the decoder is switched: d3d11videosink stays, so the
-// rendering path is not a second variable
-#define LUX_USE_D3D11_DECODER 0
+// Switches the Windows decoder between d3d11h264dec and avdec_h264. Software
+// decoding measured no better, so the DXVA decoder is not where the Windows
+// latency goes and hardware decode stays on
+#define LUX_USE_D3D11_DECODER 1
 
 bool VideoWindow::should_grab_keyboard() const {
     if (conn_info.view_only || !pointer_inside) {
