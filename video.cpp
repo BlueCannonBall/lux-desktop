@@ -16,23 +16,6 @@
 
 using nlohmann::json;
 
-// Switches the Windows decoder between d3d11h264dec and avdec_h264. Temporarily
-// back on software so that the only difference from the earlier capture is the
-// sink sync below: with both changed at once, the jitter buffer jumping from
-// 0.62ms to 26.17ms could not be attributed to either
-#define LUX_USE_D3D11_DECODER 0
-
-// Whether the video sink waits on the clock before rendering each frame. At 0 it
-// renders on arrival, which takes the deadline arithmetic and, on Windows, the
-// system timer granularity out of the path entirely.
-//
-// Under test because per-element latency is near identical between Windows and
-// Linux (the decoder matches to two decimal places) while every tail is several
-// times fatter on Windows, which points at clock waiting rather than processing.
-// The cost of 0 is frame pacing: frames arriving in a burst are painted in a
-// burst rather than spread across their timestamps
-#define LUX_SINK_SYNC 0
-
 bool VideoWindow::should_grab_keyboard() const {
     if (conn_info.view_only || !pointer_inside) {
         return false;
@@ -364,24 +347,21 @@ void VideoWindow::show() {
 
 #ifdef _WIN32
         GstElement* h264parse = gst_element_factory_make("h264parse", nullptr);
+#endif
 
-    #if LUX_USE_D3D11_DECODER
-        GstElement* h264dec = gst_element_factory_make("d3d11h264dec", nullptr);
-    #else
-        GstElement* h264dec = gst_element_factory_make("avdec_h264", nullptr);
-        if (h264dec) {
-            g_object_set(h264dec, "direct-rendering", FALSE, "thread-type", 2 /* slice */, nullptr);
-        }
-    #endif
-#else
-        GstElement* h264dec = gst_element_factory_make("avdec_h264", nullptr);
+        // Software decoding on every platform, including Windows. d3d11h264dec
+        // measures faster in isolation, 0.36ms against 1.36ms, but starves its
+        // surface pool and back-pressures upstream: with it in place
+        // rtpjitterbuffer sat at 26.17ms mean against 0.32ms with software
+        // decoding, on captures that differed in nothing else.
+        //
         // thread-type is pinned rather than left on "auto": auto resolves to slice
         // threading today, but if libav ever picks frame threading it buffers ~19
         // frames, which measured as 320ms of latency against 5ms for slice
+        GstElement* h264dec = gst_element_factory_make("avdec_h264", nullptr);
         if (h264dec) {
             g_object_set(h264dec, "direct-rendering", FALSE, "thread-type", 2 /* slice */, nullptr);
         }
-#endif
         if (!h264dec) {
             fl_alert("Failed to create the H.264 decoder");
             return;
@@ -427,11 +407,17 @@ void VideoWindow::show() {
         // max-lateness is deliberately left at its default: it has no latency effect
         // (measured), and pairing 0 slack with drop-anything-late invites frame loss
         g_object_set(videosink, "processing-deadline", (guint64) 0, nullptr);
-#if !LUX_SINK_SYNC
-        // Renders on arrival. processing-deadline above is then moot, but is left
-        // set so that flipping LUX_SINK_SYNC back on restores the tuned behaviour
+
+        // Render on arrival rather than waiting for each frame's timestamp. Syncing
+        // paces playback to the sender's timing, which for a desktop means holding
+        // a frame back to show a staler one: the newest state should reach the
+        // screen as soon as it exists. A burst is then painted back to back, and
+        // if the decoder falls behind for real the appsrcs are leaky-type=downstream
+        // so the oldest input is dropped instead of queued.
+        //
+        // processing-deadline above is moot while this is off, but is left set so
+        // that turning sync back on gets the tuned behaviour and not the default
         g_object_set(videosink, "sync", FALSE, nullptr);
-#endif
 
         gst_bin_add_many(GST_BIN(video_pipeline.get()),
             appsrc,
