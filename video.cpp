@@ -16,10 +16,11 @@
 
 using nlohmann::json;
 
-// Switches the Windows decoder between d3d11h264dec and avdec_h264. Software
-// decoding measured no better, so the DXVA decoder is not where the Windows
-// latency goes and hardware decode stays on
-#define LUX_USE_D3D11_DECODER 1
+// Switches the Windows decoder between d3d11h264dec and avdec_h264. Temporarily
+// back on software so that the only difference from the earlier capture is the
+// sink sync below: with both changed at once, the jitter buffer jumping from
+// 0.62ms to 26.17ms could not be attributed to either
+#define LUX_USE_D3D11_DECODER 0
 
 // Whether the video sink waits on the clock before rendering each frame. At 0 it
 // renders on arrival, which takes the deadline arithmetic and, on Windows, the
