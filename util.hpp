@@ -46,17 +46,21 @@ public:
     }
 
     void notify_one() {
-        mutex.lock();
-        notified = true;
-        mutex.unlock();
-        cv.notify_one();
+        std::unique_lock<std::mutex> lock(mutex);
+        if (!notified) {
+            notified = true;
+            lock.unlock();
+            cv.notify_one();
+        }
     }
 
     void notify_all() {
-        mutex.lock();
-        notified = true;
-        mutex.unlock();
-        cv.notify_all();
+        std::unique_lock<std::mutex> lock(mutex);
+        if (!notified) {
+            notified = true;
+            lock.unlock();
+            cv.notify_all();
+        }
     }
 };
 
